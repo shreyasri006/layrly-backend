@@ -4,23 +4,28 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.layrly.ai.ImageAnalyzer;
+import com.layrly.dao.WardrobeItemDAO;
+import com.layrly.domain.WardrobeAnalyzedItem;
+import com.layrly.domain.WardrobeItem;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+
+import static com.layrly.ai.Prompts.IMAGE_META_DATA_EXTRACT_PROMPT;
+import static com.layrly.lambda.ResponseUtil.getApiGatewayProxyResponseEvent;
 
 public class WardrobeLambdaHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    // S3_BUCKET_NAME should be just the bucket name (e.g., "layrly"), not the full S3 path
-    // The S3 path/key is specified separately in the putRequest
+    // bucket name (e.g., "layrly")
     private static final String S3_BUCKET_NAME = "layrly";
+    private final WardrobeItemDAO wardrobeItemDAO = new WardrobeItemDAO();
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
@@ -34,58 +39,54 @@ public class WardrobeLambdaHandler implements RequestHandler<APIGatewayProxyRequ
             System.out.println("Received requestBody Keys: " + requestBody.keySet());
 
             String imageBase64 = (String) requestBody.get("image");
-            String fileName = (String) requestBody.get("fileName");
+            String fileName = UUID.randomUUID() + "/" + requestBody.get("fileName");
             // Add other parameters as needed
             String category = (String) requestBody.get("category");
             String color = (String) requestBody.get("color");
             String brand = (String) requestBody.get("brand");
 
             // Print request parameters
-            System.out.println("File Name: " + fileName);
-            System.out.println("Category: " + category);
-            System.out.println("Color: " + color);
-            System.out.println("Brand: " + brand);
+            System.out.println("File Name: " + fileName + ", Category: " + category + ", Color: " + color +
+                    ", Brand: " + brand);
+
+            // Upload to S3 in the images folder
+            String s3Key = "images/" + fileName;  // Store in images folder
+            upload(s3Key, imageBase64);
+
+            String metadata = ImageAnalyzer.extractMetadata(IMAGE_META_DATA_EXTRACT_PROMPT, imageBase64);
+            WardrobeAnalyzedItem analyzedItem = new WardrobeAnalyzedItem(null, metadata);
+
+            // insert into DB
+            WardrobeItem item = new WardrobeItem(
+                    null, UUID.fromString("21ab1550-20d1-7034-e634-0c82cdead03f"), s3Key, category, color,
+                    brand, analyzedItem); // TODO set userName
+            wardrobeItemDAO.insertWardrobeItem(item);
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            // Return error response
+            return getApiGatewayProxyResponseEvent(500, e.getMessage(), true);
+        }
+
+        // Success response
+        return getApiGatewayProxyResponseEvent(200, "Image uploaded successfully", false);
+    }
+
+    private static void upload(String s3Key, String imageBase64) {
+        try (S3Client s3Client = S3Client.builder()
+                .region(Region.US_EAST_2)
+                .build()) {
+
+            PutObjectRequest putRequest = PutObjectRequest.builder()
+                    .bucket(S3_BUCKET_NAME)
+                    .key(s3Key)
+                    .build();
 
             // Decode base64 image
             byte[] imageBytes = Base64.getDecoder().decode(imageBase64);
 
-            // Upload to S3 in the images folder
-            String s3Key = "images/" + fileName;  // Store in images folder
-            
-            try (S3Client s3Client = S3Client.builder()
-                    .region(Region.US_EAST_2)
-                    .build()) {
-                
-                PutObjectRequest putRequest = PutObjectRequest.builder()
-                        .bucket(S3_BUCKET_NAME)
-                        .key(s3Key)
-                        .build();
-
-                s3Client.putObject(putRequest, RequestBody.fromBytes(imageBytes));
-                System.out.println("Image uploaded to S3: " + s3Key);
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
-
-            // Return error response
-            APIGatewayProxyResponseEvent errorResponse = new APIGatewayProxyResponseEvent();
-            errorResponse.setStatusCode(500);
-            errorResponse.setBody("{\"error\": \"" + e.getMessage() + "\"}");
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Content-Type", "application/json");
-            errorResponse.setHeaders(headers);
-            return errorResponse;
+            s3Client.putObject(putRequest, RequestBody.fromBytes(imageBytes));
+            System.out.println("Image uploaded to S3: " + s3Key);
         }
-
-        // Success response
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        response.setStatusCode(200);
-        response.setBody("{\"message\": \"Image uploaded successfully\"}");
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
-        response.setHeaders(headers);
-        return response;
     }
 }
