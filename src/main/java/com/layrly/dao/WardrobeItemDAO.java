@@ -1,5 +1,6 @@
 package com.layrly.dao;
 
+import com.layrly.domain.WardrobeAnalyzedItem;
 import com.layrly.domain.WardrobeItem;
 
 import java.sql.Connection;
@@ -53,7 +54,7 @@ public class WardrobeItemDAO extends BaseDAO {
     }
 
     private void insertWardrobeAnalyzedItem(Long itemId, String aiDescription, Connection conn) throws SQLException {
-        String sql = "INSERT INTO apparel_analysis (apparel_id, ai_description) VALUES (?, to_jsonb(?::text))";
+        String sql = "INSERT INTO apparel_analysis (apparel_id, ai_description) VALUES (?, ?::jsonb)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, itemId);
@@ -68,24 +69,24 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserId(String userName) throws Exception {
+    public List<WardrobeItem> getWardrobeItemsByUserId(UUID userName) throws Exception {
         return executeQuery(conn -> {
-            String sql = "SELECT apparel_id, user_name, image_url, category, color, brand FROM apparel WHERE user_name = ? ORDER BY apparel_id DESC";
+            String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, userName);
+                stmt.setObject(1, userName);
 
                 try (ResultSet rs = stmt.executeQuery()) {
                     while(rs.next()) {
                         items.add(new WardrobeItem(
-                                rs.getString("apparel_id"),
+                                rs.getString("apparel_id" ),
                                 rs.getObject("user_name", UUID.class),
-                                rs.getString("image_url"),
-                                rs.getString("category"),
-                                rs.getString("color"),
-                                rs.getString("brand"),
-                                null
+                                rs.getString("image_url" ),
+                                rs.getString("category" ),
+                                rs.getString("color" ),
+                                rs.getString("brand" ),
+                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription" ))
                         ));
                     }
                 }
@@ -99,7 +100,7 @@ public class WardrobeItemDAO extends BaseDAO {
      */
     public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(UUID userName, String category) throws Exception {
         return executeQuery(conn -> {
-            String sql = "SELECT apparel_id, user_name, image_url, category, color, brand FROM apparel WHERE user_name = ? AND category = ? ORDER BY apparel_id DESC";
+            String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? AND a.category = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -109,13 +110,13 @@ public class WardrobeItemDAO extends BaseDAO {
                 try (ResultSet rs = stmt.executeQuery()) {
                     while(rs.next()) {
                         items.add(new WardrobeItem(
-                                rs.getString("apparel_id"),
+                                rs.getString("apparel_id" ),
                                 rs.getObject("user_name", UUID.class),
-                                rs.getString("image_url"),
-                                rs.getString("category"),
-                                rs.getString("color"),
-                                rs.getString("brand"),
-                                null
+                                rs.getString("image_url" ),
+                                rs.getString("category" ),
+                                rs.getString("color" ),
+                                rs.getString("brand" ),
+                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription" ))
                         ));
                     }
                 }
@@ -160,7 +161,7 @@ public class WardrobeItemDAO extends BaseDAO {
 
                 int rowsAffected = stmt.executeUpdate();
                 if(rowsAffected == 0) {
-                    throw new Exception("Wardrobe item not found or unauthorized access");
+                    throw new Exception("Wardrobe item not found or unauthorized access" );
                 }
                 System.out.println("Wardrobe item deleted. Rows affected: " + rowsAffected);
             }

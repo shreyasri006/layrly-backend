@@ -101,4 +101,54 @@ public class Prompts {
             - If a field cannot be confidently determined, return "unknown".
             - Do NOT output anything except the JSON object.
             """;
+
+    public static final String RECOMMENDATION_PROMPT = """
+            You are a fashion recommendation assistant.
+            
+            Inputs:
+            
+            1. Wardrobe items: {{WARDROBE_JSON}}
+            2. Weather: {{WEATHER_JSON}}
+            
+            Task:
+            
+            - Generate outfit recommendations appropriate for the given weather.
+            - **Strictly use only the items present in the wardrobe JSON**. Do not create or invent any new apparel (e.g., pants, shoes, hoodies) that are not in the input.
+            - Each recommendation can include one or more items from the wardrobe, combined appropriately for weather, season, and occasion.
+            - Include the `apparel_id`s used in each recommendation that exists in the Wardrobe items JSON.
+            - No new apparel_id values appear.
+            - Provide 2–3 recommendations if possible.
+            - Output **only JSON** in the following format and don't output other than JSON.
+            
+            [
+              {
+                "recommendation_id": 1,
+                "items": [
+                  {"apparel_id": 1, "type": "shirt", "description": "..."},
+                  {"apparel_id": 2, "type": "jacket", "description": "..."},
+                  {"apparel_id": 3, "type": "pant", "description": "..."}
+                ]
+              },
+              {
+                "recommendation_id": 2,
+                "items": [
+                  {"apparel_id": 1, "type": "shirt", "description": "..."},
+                  {"apparel_id": 3, "type": "pant", "description": "..."}
+                ]
+              },
+              {
+                "recommendation_id": 2,
+                "items": [
+                  {"apparel_id": 4, "type": "shirt", "description": "..."},
+                  {"apparel_id": 3, "type": "pant", "description": "..."}
+                ]
+              }
+            ]
+            
+            Guidelines:
+            
+            - Ensure recommendations only use **existing wardrobe items and apparel_id**.
+            - Prefer items that naturally layer together and match in style and color.
+            - Do not add commentary, suggestions, or invented items — **output only JSON with provided wardrobe items**.
+            """;
 }

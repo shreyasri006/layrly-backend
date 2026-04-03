@@ -1,0 +1,17 @@
+{
+  "awsRequestId": "355a3c87-03ac-4810-b88b-b79383ea3b3a",
+  "logGroupName": "/aws/lambda/WardrobeFunction",
+  "logStreamName": "2026/03/31/[$LATEST]69d624054fd44ba9a2ebcbd73e8212c1",
+  "functionName": "WardrobeFunction",
+  "functionVersion": "$LATEST",
+  "invokedFunctionArn": "arn:aws:lambda:us-east-2:710514263620:function:WardrobeFunction",
+  "clientContext": null,
+  "tenantId": null,
+  "xrayTraceId": "Root=1-69cb1b9f-57376afc2389016213fcf974;Parent=434c43632862b99f;Sampled=0;Lineage=1:a4840e96:0",
+  "logger": {
+    "logFormat": "TEXT"
+  },
+  "identity": null,
+  "remainingTimeInMillis": 89443,
+  "memoryLimitInMB": 512
+}

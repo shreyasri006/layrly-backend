@@ -20,4 +20,14 @@ public class ResponseUtil {
         errorResponse.setHeaders(headers);
         return errorResponse;
     }
+
+    public static APIGatewayProxyResponseEvent getApiGatewayProxyResponseEvent(int statusCode, String json) {
+        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
+        response.setStatusCode(statusCode);
+        response.setBody(json);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+        response.setHeaders(headers);
+        return response;
+    }
 }
