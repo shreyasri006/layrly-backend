@@ -29,7 +29,7 @@
     "x-forwarded-proto": "https"
   },
   "multiValueHeaders": null,
-  "queryStringParameters": null,
+  "queryStringParameters": {},
   "multiValueQueryStringParameters": null,
   "pathParameters": null,
   "stageVariables": null,

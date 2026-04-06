@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.layrly.ai.ImageAnalyzer;
+import com.layrly.dao.RecommendationDAO;
 import com.layrly.dao.WardrobeItemDAO;
 import com.layrly.domain.WardrobeAnalyzedItem;
 import com.layrly.domain.WardrobeItem;
@@ -29,24 +30,30 @@ import static org.mockito.Mockito.when;
 public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
 
     private RecommendationLambdaHandler handler;
-    private WardrobeItemDAO mockDAO;
+    private WardrobeItemDAO wardrobeItemDAO;
+    private RecommendationDAO recommendationDAO;
     private ObjectMapper mapper = new ObjectMapper();
     private ImageAnalyzer imageAnalyzer;
 
     @BeforeEach
     void setUp() throws Exception {
         handler = new RecommendationLambdaHandler();
-        mockDAO = mock(WardrobeItemDAO.class);
+        wardrobeItemDAO = mock(WardrobeItemDAO.class);
+        recommendationDAO = mock(RecommendationDAO.class);
         imageAnalyzer = mock(ImageAnalyzer.class);
 
         // Use reflection to inject the mock DAO
         Field daoField = RecommendationLambdaHandler.class.getDeclaredField("wardrobeItemDAO");
         daoField.setAccessible(true);
-        daoField.set(handler, mockDAO);
+        daoField.set(handler, wardrobeItemDAO);
 
         Field imageAnalyzerField = RecommendationLambdaHandler.class.getDeclaredField("imageAnalyzer");
         imageAnalyzerField.setAccessible(true);
         imageAnalyzerField.set(handler, imageAnalyzer);
+
+        Field recommendationDAOField = RecommendationLambdaHandler.class.getDeclaredField("recommendationDAO");
+        recommendationDAOField.setAccessible(true);
+        recommendationDAOField.set(handler, recommendationDAO);
     }
 
     @Test
@@ -69,7 +76,7 @@ public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
                 new Recommendation(1, List.of(Map.of("apparel_id", "1", "type", "shirt", "description", "Blue Nike shirt")))
         );
 
-        when(mockDAO.getWardrobeItemsByUserId(UUID.fromString(userName))).thenReturn(mockWardrobeItems);
+        when(wardrobeItemDAO.getWardrobeItemsByUserId(UUID.fromString(userName))).thenReturn(mockWardrobeItems);
 
         try (MockedStatic<WeatherService> mockedWeatherService = mockStatic(WeatherService.class);
              MockedStatic<ImageAnalyzer> mockedImageAnalyzer = mockStatic(ImageAnalyzer.class)) {
@@ -87,9 +94,31 @@ public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
             assertEquals(mockWeather, responseBody.weather());
             assertEquals(expectedRecommendations.size(), responseBody.recommendations().size());
 
-            verify(mockDAO).getWardrobeItemsByUserId(UUID.fromString(userName));
+            verify(wardrobeItemDAO).getWardrobeItemsByUserId(UUID.fromString(userName));
 
             System.out.println("Response Body: " + response.getBody());
         }
+    }
+
+    @Test
+    void testHandleRequest_With_Cache_Success() throws Exception {
+        // Arrange
+        APIGatewayProxyRequestEvent event = getApiGatewayProxyRequestEvent();
+        Context context = mock(Context.class);
+
+        String userName = "61cbb570-c061-7014-0768-39bb94515335";
+        String zipCode = "46202";
+
+        when(recommendationDAO.getLatestOutFitByUserNameAndCreatedTime(UUID.fromString(userName), 1)).thenReturn("{\"weather\":{\"temperature\":70.0,\"feels_like\":65.0,\"description\":\"Sunny\",\"icon\":\"sunny.png\",\"wind_speed\":10.0,\"city_name\":\"New York\",\"detailed_description\":\"Clear skies\"},\"recommendations\":[{\"recommendation_id\":1,\"items\":[{\"apparel_id\":\"1\",\"type\":\"shirt\",\"description\":\"Blue Nike shirt\"}]}]}");
+
+        // Act
+        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+
+        // Assert
+        assertEquals(200, response.getStatusCode());
+
+        verify(recommendationDAO).getLatestOutFitByUserNameAndCreatedTime(UUID.fromString(userName), 1);
+
+        System.out.println("Response Body: " + response.getBody());
     }
 }

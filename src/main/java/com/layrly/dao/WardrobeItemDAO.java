@@ -167,4 +167,28 @@ public class WardrobeItemDAO extends BaseDAO {
             }
         });
     }
+
+    /**
+     * Get total count of apparel records for a given user name
+     *
+     * @param userName user name (UUID)
+     * @return count of apparel records
+     * @throws Exception if query fails
+     */
+    public long getApparelCountByUserName(UUID userName) throws Exception {
+        return executeQuery(conn -> {
+            String sql = "SELECT COUNT(*) as count FROM apparel WHERE user_name = ?";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setObject(1, userName);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if(rs.next()) {
+                        return rs.getLong("count");
+                    }
+                }
+            }
+            return 0L;
+        });
+    }
 }

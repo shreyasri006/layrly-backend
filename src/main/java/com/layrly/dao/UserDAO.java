@@ -6,7 +6,7 @@ import java.sql.PreparedStatement;
 import java.util.UUID;
 
 /**
- * Data Access Object for Users table
+ * Data Access Object for users table
  * Handles all database operations related to users
  */
 public class UserDAO extends BaseDAO {

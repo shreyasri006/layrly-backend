@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.layrly.Util.S3_BUCKET_NAME;
 import static com.layrly.Util.mapper;
 import static com.layrly.ai.Prompts.IMAGE_META_DATA_EXTRACT_PROMPT;
 import static com.layrly.lambda.ResponseUtil.getApiGatewayProxyResponseEvent;
@@ -23,7 +24,6 @@ import static com.layrly.lambda.ResponseUtil.getApiGatewayProxyResponseEvent;
 public class WardrobeLambdaHandler extends LambdaHandler {
 
     // bucket name (e.g., "layrly")
-    private static final String S3_BUCKET_NAME = "layrly";
     private final WardrobeItemDAO wardrobeItemDAO = new WardrobeItemDAO();
     private final ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
 

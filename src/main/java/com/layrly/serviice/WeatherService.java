@@ -11,11 +11,11 @@ import java.time.Duration;
 import static com.layrly.Util.mapper;
 
 public class WeatherService {
-    private static final String WEATHER_API = "https://api.weatherapi.com/v1/current.json?key=1c4b8bdfc35c46959ff65434263103&q=%s&aqi=no";
+    private static final String WEATHER_API = "https://api.weatherapi.com/v1/current.json?key=" + System.getenv("WEATHER_API_KEY") + "&q=%s&aqi=no";
     private static HttpClient client;
 
     private static HttpClient getClient() {
-        if (client == null) {
+        if(client == null) {
             client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
