@@ -1,17 +1,13 @@
 package com.layrly.dao;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.Map;
 
 /**
  * DatabaseConnection utility class for managing PostgreSQL connections
- * Handles credential retrieval from AWS Secrets Manager
+ * Handles credential retrieval from AWS Secrets Manager and connection pooling
  */
 public class DatabaseConnection {
 
@@ -19,17 +15,44 @@ public class DatabaseConnection {
     private static final String DB_USER = "postgres";
     private static final String SECRET_ARN = "arn:aws:secretsmanager:us-east-2:710514263620:secret:rds!cluster-b08348b8-b0bc-401c-b7e3-4a7175a5f668-oYo4QI";
 
+    private static HikariDataSource dataSource;
+
     /**
-     * Get a new database connection
+     * Lazily initialize the DataSource on first use.
+     * This reduces Lambda cold start time by deferring expensive initialization.
+     *
+     * @return initialized HikariDataSource
+     * @throws Exception if initialization fails
+     */
+    private static synchronized HikariDataSource getDataSource() throws Exception {
+        if (dataSource == null) {
+            String password = getDbPassword();
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl(DB_URL);
+            config.setUsername(DB_USER);
+            config.setPassword(password);
+            config.setMaximumPoolSize(2);
+            config.setMinimumIdle(1);
+            config.setConnectionTimeout(3000);
+            config.setIdleTimeout(600000);
+            config.setMaxLifetime(1800000);
+            config.setAutoCommit(false);
+            config.setConnectionTestQuery(null);
+            config.setValidationTimeout(1000);
+
+            dataSource = new HikariDataSource(config);
+        }
+        return dataSource;
+    }
+
+    /**
+     * Get a new database connection from the pool
      *
      * @return Connection object
      * @throws Exception if connection fails
      */
     public static Connection getConnection() throws Exception {
-        String password = getDbPassword();
-        Connection conn = DriverManager.getConnection(DB_URL, DB_USER, password);
-        conn.setAutoCommit(false);
-        return conn;
+        return getDataSource().getConnection();
     }
 
     /**
@@ -39,23 +62,24 @@ public class DatabaseConnection {
      * @throws Exception if retrieval fails
      */
     private static String getDbPassword() throws Exception {
-        try (SecretsManagerClient client = SecretsManagerClient.create()) {
-            GetSecretValueRequest request = GetSecretValueRequest.builder()
-                    .secretId(SECRET_ARN)
-                    .build();
-
-            String secretString = client.getSecretValue(request).secretString();
-
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, String> secretMap = mapper.readValue(secretString, new TypeReference<>() {
-            });
-
-            return secretMap.get("password");
-        }
+//        try (SecretsManagerClient client = SecretsManagerClient.create()) {
+//            GetSecretValueRequest request = GetSecretValueRequest.builder()
+//                    .secretId(SECRET_ARN)
+//                    .build();
+//
+//            String secretString = client.getSecretValue(request).secretString();
+//
+//            ObjectMapper mapper = new ObjectMapper();
+//            Map<String, String> secretMap = mapper.readValue(secretString, new TypeReference<>() {
+//            });
+//
+//            return secretMap.get("password");
+//        }
+        return System.getenv("DB_PASSWORD");
     }
 
     /**
-     * Close a database connection and rollback if needed
+     * Close a database connection and rollback if needed (returns connection to pool)
      *
      * @param conn           Connection to close
      * @param shouldRollback whether to rollback before closing
@@ -70,9 +94,7 @@ public class DatabaseConnection {
                 System.out.println("Rollback failed: " + e.getMessage());
             } finally {
                 try {
-                    if(!conn.isClosed()) {
-                        conn.close();
-                    }
+                    conn.close(); // Return connection to the pool
                 } catch (Exception e) {
                     System.out.println("Failed to close connection: " + e.getMessage());
                 }
@@ -81,7 +103,7 @@ public class DatabaseConnection {
     }
 
     /**
-     * Close a database connection (assumes transaction was committed)
+     * Close a database connection (returns connection to pool, assumes transaction was committed)
      *
      * @param conn Connection to close
      */
@@ -89,4 +111,3 @@ public class DatabaseConnection {
         closeConnection(conn, false);
     }
 }
-

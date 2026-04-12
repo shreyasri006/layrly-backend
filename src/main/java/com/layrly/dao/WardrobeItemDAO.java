@@ -80,13 +80,13 @@ public class WardrobeItemDAO extends BaseDAO {
                 try (ResultSet rs = stmt.executeQuery()) {
                     while(rs.next()) {
                         items.add(new WardrobeItem(
-                                rs.getString("apparel_id" ),
+                                rs.getString("apparel_id"),
                                 rs.getObject("user_name", UUID.class),
-                                rs.getString("image_url" ),
-                                rs.getString("category" ),
-                                rs.getString("color" ),
-                                rs.getString("brand" ),
-                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription" ))
+                                rs.getString("image_url"),
+                                rs.getString("category"),
+                                rs.getString("color"),
+                                rs.getString("brand"),
+                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
                         ));
                     }
                 }
@@ -110,13 +110,13 @@ public class WardrobeItemDAO extends BaseDAO {
                 try (ResultSet rs = stmt.executeQuery()) {
                     while(rs.next()) {
                         items.add(new WardrobeItem(
-                                rs.getString("apparel_id" ),
+                                rs.getString("apparel_id"),
                                 rs.getObject("user_name", UUID.class),
-                                rs.getString("image_url" ),
-                                rs.getString("category" ),
-                                rs.getString("color" ),
-                                rs.getString("brand" ),
-                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription" ))
+                                rs.getString("image_url"),
+                                rs.getString("category"),
+                                rs.getString("color"),
+                                rs.getString("brand"),
+                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
                         ));
                     }
                 }
@@ -128,7 +128,7 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Update a wardrobe item by user name
      */
-    public void updateWardrobeItem(String id, String category, String color, String brand, String userName) throws Exception {
+    public void updateWardrobeItem(long id, String category, String color, String brand, UUID userName) throws Exception {
         executeTransaction(conn -> {
             String sql = "UPDATE apparel SET category = ?, color = ?, brand = ?, modified_at = CURRENT_TIMESTAMP WHERE apparel_id = ? AND user_name = ?";
 
@@ -136,9 +136,13 @@ public class WardrobeItemDAO extends BaseDAO {
                 stmt.setString(1, category);
                 stmt.setString(2, color);
                 stmt.setString(3, brand);
-                stmt.setString(4, id);
+                stmt.setLong(4, id);
+                stmt.setObject(5, userName);
 
                 int rowsAffected = stmt.executeUpdate();
+                if(rowsAffected == 0) {
+                    throw new Exception("Wardrobe item not found or you do not have permission to update.");
+                }
                 System.out.println("Wardrobe item updated. Rows affected: " + rowsAffected);
             }
         });
@@ -151,21 +155,40 @@ public class WardrobeItemDAO extends BaseDAO {
      * @param userName user name (for security validation)
      * @throws Exception if deletion fails
      */
-    public void deleteWardrobeItem(String id, UUID userName) throws Exception {
+    public void deleteWardrobeItem(long id, UUID userName) throws Exception {
         executeTransaction(conn -> {
-            String sql = "DELETE FROM apparel WHERE apparel_id = ? AND user_name = ?";
-
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, id);
-                stmt.setObject(2, userName);
-
-                int rowsAffected = stmt.executeUpdate();
-                if(rowsAffected == 0) {
-                    throw new Exception("Wardrobe item not found or unauthorized access" );
-                }
-                System.out.println("Wardrobe item deleted. Rows affected: " + rowsAffected);
-            }
+            deleteApparelAnalysis(id, conn);
+            deleteApparel(id, userName, conn);
         });
+    }
+
+    private void deleteApparelAnalysis(long id, Connection conn) throws Exception {
+        String sql = "DELETE FROM apparel_analysis WHERE apparel_id = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+
+            int rowsAffected = stmt.executeUpdate();
+            if(rowsAffected == 0) {
+                throw new Exception("Wardrobe item not found.");
+            }
+            System.out.println("Wardrobe Analysis item deleted. Rows affected: " + rowsAffected);
+        }
+    }
+
+    private static void deleteApparel(long id, UUID userName, Connection conn) throws Exception {
+        String sql = "DELETE FROM apparel WHERE apparel_id = ? AND user_name = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            stmt.setObject(2, userName);
+
+            int rowsAffected = stmt.executeUpdate();
+            if(rowsAffected == 0) {
+                throw new Exception("Wardrobe item not found or you do not have permission to delete.");
+            }
+            System.out.println("Wardrobe item deleted. Rows affected: " + rowsAffected);
+        }
     }
 
     /**
