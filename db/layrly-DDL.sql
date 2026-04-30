@@ -20,8 +20,8 @@ CREATE TABLE apparel (
     modified_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_apparel_user ON apparel(user_name);
-
+-- we are always searching records by exact user_name and Hash index look up is O(1)
+CREATE INDEX idx_apparel_user ON apparel using HASH (user_name);
 
 
 CREATE TABLE apparel_analysis (
