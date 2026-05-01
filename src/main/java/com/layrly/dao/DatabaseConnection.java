@@ -13,7 +13,6 @@ public class DatabaseConnection {
 
     private static final String DB_URL = "jdbc:postgresql://database-1-instance-1.c9uqeycswfv8.us-east-2.rds.amazonaws.com:5432/postgres?sslmode=require";
     private static final String DB_USER = "postgres";
-    private static final String SECRET_ARN = "arn:aws:secretsmanager:us-east-2:710514263620:secret:rds!cluster-b08348b8-b0bc-401c-b7e3-4a7175a5f668-oYo4QI";
 
     private static HikariDataSource dataSource;
 

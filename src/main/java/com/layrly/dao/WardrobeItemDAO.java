@@ -69,7 +69,7 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserId(UUID userName) throws Exception {
+    public List<WardrobeItem> getWardrobeItemsByUserId(UUID userName) throws Exception {                 //11
         return executeQuery(conn -> {
             String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
@@ -98,7 +98,7 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user by category with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(UUID userName, String category) throws Exception {
+    public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(UUID userName, String category) throws Exception { //11
         return executeQuery(conn -> {
             String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? AND a.category = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
@@ -198,7 +198,7 @@ public class WardrobeItemDAO extends BaseDAO {
      * @return count of apparel records
      * @throws Exception if query fails
      */
-    public long getApparelCountByUserName(UUID userName) throws Exception {
+    public long getApparelCountByUserName(UUID userName) throws Exception { //11
         return executeQuery(conn -> {
             String sql = "SELECT COUNT(*) as count FROM apparel WHERE user_name = ?";
 

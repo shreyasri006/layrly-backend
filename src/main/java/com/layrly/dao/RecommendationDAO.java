@@ -34,7 +34,7 @@ public class RecommendationDAO extends BaseDAO {
      * @return outFits (Recommendation)
      * @throws Exception if query fails
      */
-    public String getLatestOutFitByUserNameAndCreatedTime(UUID userName, int hours) throws Exception {
+    public String getLatestOutFitByUserNameAndCreatedTime(UUID userName, int hours) throws Exception {                //2
         return executeQuery(conn -> {
             String sql = "SELECT outfits::text as outfits FROM recommendations WHERE user_name = ? AND created_at > NOW() - INTERVAL '1 hour' * ?";
 
@@ -58,7 +58,7 @@ public class RecommendationDAO extends BaseDAO {
      * @return count of recommendations
      * @throws Exception if query fails
      */
-    public long getTotalRecommendationsCountByUserName(UUID userName) throws Exception {
+    public long getTotalRecommendationsCountByUserName(UUID userName) throws Exception {                             //2
         return executeQuery(conn -> {
             String sql = "SELECT COUNT(*) as count FROM recommendations WHERE user_name = ?";
 
