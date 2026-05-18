@@ -1,0 +1,7 @@
+user_name,name,email,gender,created_at,modified_at,zip
+61cbb570-c061-7014-0768-39bb94515335,Shreyas Sreenath,shreyasri006@gmail.com,Male,2026-03-31 01:02:06.434495,NULL,46202
+816ba530-e071-7072-065b-23b134380653,Shreyas Sreenath,ssreenat@purdue.edu,Male,2026-03-31 01:47:27.682961,NULL,91775
+31ebd560-c051-702a-f095-5ce819f1e6b0,Shreyas s,shreyas_s@gmail.com,Male,2026-04-03 04:52:23.816672,NULL,91775
+f12b95e0-8021-70c0-a2cf-d78838e0fa5a,Kushi Sreenath,kushisreenath2008@gmail.com,Female,2026-04-11 20:16:36.381173,NULL,91775
+51fb55e0-90f1-709c-865b-e3ac4720fc30,Kushi Sreenath,kushisreenath2008@gmail.com,Female,2026-04-11 20:17:11.542551,NULL,91775
+b1bb2540-6001-70de-67c2-35ef6bceb032,aa aa,aaa@purdue.edu,Male,2026-05-09 09:22:39.806885,NULL,47906
