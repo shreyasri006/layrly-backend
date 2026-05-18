@@ -21,8 +21,8 @@ public abstract class BaseDAO {
             conn.commit();
         } catch (Exception e) {
             DatabaseConnection.closeConnection(conn, true);
-            System.out.println("Database operation failed: " + e.getMessage());
-            throw new RuntimeException("Database operation failed: " + e.getMessage(), e);
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage(), e);
         } finally {
             if (conn != null && !conn.isClosed()) {
                 DatabaseConnection.closeConnection(conn);

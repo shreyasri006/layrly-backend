@@ -33,4 +33,26 @@ public class CategoryDAO extends BaseDAO {
             return categories;
         });
     }
+
+    /**
+     * Get total count of category
+     *
+     * @return count of Category
+     * @throws Exception if query fails
+     */
+    public long getTotalCategories() throws Exception {
+        return executeQuery(conn -> {
+            String sql = "SELECT COUNT(*) as count FROM category";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if(rs.next()) {
+                        return rs.getLong("count");
+                    }
+                }
+            }
+            return 0L;
+        });
+    }
 }

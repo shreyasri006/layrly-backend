@@ -1,10 +1,8 @@
 package com.layrly.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.layrly.ai.ImageAnalyzer;
 import com.layrly.dao.WardrobeItemDAO;
 import com.layrly.domain.WardrobeAnalyzedItem;
@@ -18,22 +16,24 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.layrly.Util.S3_BUCKET_NAME;
+import static com.layrly.Util.mapper;
 import static com.layrly.ai.Prompts.IMAGE_META_DATA_EXTRACT_PROMPT;
 import static com.layrly.lambda.ResponseUtil.getApiGatewayProxyResponseEvent;
 
-public class WardrobeLambdaHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class WardrobeLambdaHandler extends LambdaHandler {
 
     // bucket name (e.g., "layrly")
-    private static final String S3_BUCKET_NAME = "layrly";
     private final WardrobeItemDAO wardrobeItemDAO = new WardrobeItemDAO();
+    private final ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
 
-        System.out.println("Received event: " + event);
+        // Authenticated User
+        String userName = getUserName(event);
 
         try {
-            ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> requestBody = mapper.readValue(event.getBody(), Map.class);
 
             System.out.println("Received requestBody Keys: " + requestBody.keySet());
@@ -53,13 +53,13 @@ public class WardrobeLambdaHandler implements RequestHandler<APIGatewayProxyRequ
             String s3Key = "images/" + fileName;  // Store in images folder
             upload(s3Key, imageBase64);
 
-            String metadata = ImageAnalyzer.extractMetadata(IMAGE_META_DATA_EXTRACT_PROMPT, imageBase64);
+            String metadata = imageAnalyzer.extractMetadata(IMAGE_META_DATA_EXTRACT_PROMPT, imageBase64);
             WardrobeAnalyzedItem analyzedItem = new WardrobeAnalyzedItem(null, metadata);
 
             // insert into DB
             WardrobeItem item = new WardrobeItem(
-                    null, UUID.fromString("21ab1550-20d1-7034-e634-0c82cdead03f"), s3Key, category, color,
-                    brand, analyzedItem); // TODO set userName
+                    null, UUID.fromString(userName), s3Key, category, color,
+                    brand, analyzedItem);
             wardrobeItemDAO.insertWardrobeItem(item);
         } catch (Exception e) {
             e.printStackTrace();
@@ -79,7 +79,7 @@ public class WardrobeLambdaHandler implements RequestHandler<APIGatewayProxyRequ
 
             PutObjectRequest putRequest = PutObjectRequest.builder()
                     .bucket(S3_BUCKET_NAME)
-                    .key(s3Key)
+                    .key("ui/" + s3Key) // ui/ prefix is set in cloudfront.
                     .build();
 
             // Decode base64 image

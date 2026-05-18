@@ -1,5 +1,6 @@
 package com.layrly.dao;
 
+import com.layrly.domain.WardrobeAnalyzedItem;
 import com.layrly.domain.WardrobeItem;
 
 import java.sql.Connection;
@@ -53,7 +54,7 @@ public class WardrobeItemDAO extends BaseDAO {
     }
 
     private void insertWardrobeAnalyzedItem(Long itemId, String aiDescription, Connection conn) throws SQLException {
-        String sql = "INSERT INTO apparel_analysis (apparel_id, ai_description) VALUES (?, to_jsonb(?::text))";
+        String sql = "INSERT INTO apparel_analysis (apparel_id, ai_description) VALUES (?, ?::jsonb)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, itemId);
@@ -68,13 +69,13 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserId(String userName) throws Exception {
+    public List<WardrobeItem> getWardrobeItemsByUserId(UUID userName) throws Exception {                 //11
         return executeQuery(conn -> {
-            String sql = "SELECT apparel_id, user_name, image_url, category, color, brand FROM apparel WHERE user_name = ? ORDER BY apparel_id DESC";
+            String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, userName);
+                stmt.setObject(1, userName);
 
                 try (ResultSet rs = stmt.executeQuery()) {
                     while(rs.next()) {
@@ -85,7 +86,7 @@ public class WardrobeItemDAO extends BaseDAO {
                                 rs.getString("category"),
                                 rs.getString("color"),
                                 rs.getString("brand"),
-                                null
+                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
                         ));
                     }
                 }
@@ -97,9 +98,9 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user by category with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(UUID userName, String category) throws Exception {
+    public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(UUID userName, String category) throws Exception { //11
         return executeQuery(conn -> {
-            String sql = "SELECT apparel_id, user_name, image_url, category, color, brand FROM apparel WHERE user_name = ? AND category = ? ORDER BY apparel_id DESC";
+            String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? AND a.category = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -115,7 +116,7 @@ public class WardrobeItemDAO extends BaseDAO {
                                 rs.getString("category"),
                                 rs.getString("color"),
                                 rs.getString("brand"),
-                                null
+                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
                         ));
                     }
                 }
@@ -127,7 +128,7 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Update a wardrobe item by user name
      */
-    public void updateWardrobeItem(String id, String category, String color, String brand, String userName) throws Exception {
+    public void updateWardrobeItem(long id, String category, String color, String brand, UUID userName) throws Exception {
         executeTransaction(conn -> {
             String sql = "UPDATE apparel SET category = ?, color = ?, brand = ?, modified_at = CURRENT_TIMESTAMP WHERE apparel_id = ? AND user_name = ?";
 
@@ -135,9 +136,13 @@ public class WardrobeItemDAO extends BaseDAO {
                 stmt.setString(1, category);
                 stmt.setString(2, color);
                 stmt.setString(3, brand);
-                stmt.setString(4, id);
+                stmt.setLong(4, id);
+                stmt.setObject(5, userName);
 
                 int rowsAffected = stmt.executeUpdate();
+                if(rowsAffected == 0) {
+                    throw new Exception("Wardrobe item not found or you do not have permission to update.");
+                }
                 System.out.println("Wardrobe item updated. Rows affected: " + rowsAffected);
             }
         });
@@ -150,20 +155,63 @@ public class WardrobeItemDAO extends BaseDAO {
      * @param userName user name (for security validation)
      * @throws Exception if deletion fails
      */
-    public void deleteWardrobeItem(String id, UUID userName) throws Exception {
+    public void deleteWardrobeItem(long id, UUID userName) throws Exception {
         executeTransaction(conn -> {
-            String sql = "DELETE FROM apparel WHERE apparel_id = ? AND user_name = ?";
+            deleteApparelAnalysis(id, conn);
+            deleteApparel(id, userName, conn);
+        });
+    }
+
+    private void deleteApparelAnalysis(long id, Connection conn) throws Exception {
+        String sql = "DELETE FROM apparel_analysis WHERE apparel_id = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+
+            int rowsAffected = stmt.executeUpdate();
+            if(rowsAffected == 0) {
+                throw new Exception("Wardrobe item not found.");
+            }
+            System.out.println("Wardrobe Analysis item deleted. Rows affected: " + rowsAffected);
+        }
+    }
+
+    private static void deleteApparel(long id, UUID userName, Connection conn) throws Exception {
+        String sql = "DELETE FROM apparel WHERE apparel_id = ? AND user_name = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            stmt.setObject(2, userName);
+
+            int rowsAffected = stmt.executeUpdate();
+            if(rowsAffected == 0) {
+                throw new Exception("Wardrobe item not found or you do not have permission to delete.");
+            }
+            System.out.println("Wardrobe item deleted. Rows affected: " + rowsAffected);
+        }
+    }
+
+    /**
+     * Get total count of apparel records for a given user name
+     *
+     * @param userName user name (UUID)
+     * @return count of apparel records
+     * @throws Exception if query fails
+     */
+    public long getApparelCountByUserName(UUID userName) throws Exception { //11
+        return executeQuery(conn -> {
+            String sql = "SELECT COUNT(*) as count FROM apparel WHERE user_name = ?";
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, id);
-                stmt.setObject(2, userName);
+                stmt.setObject(1, userName);
 
-                int rowsAffected = stmt.executeUpdate();
-                if(rowsAffected == 0) {
-                    throw new Exception("Wardrobe item not found or unauthorized access");
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if(rs.next()) {
+                        return rs.getLong("count");
+                    }
                 }
-                System.out.println("Wardrobe item deleted. Rows affected: " + rowsAffected);
             }
+            return 0L;
         });
     }
 }

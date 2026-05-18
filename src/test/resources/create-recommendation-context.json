@@ -1,0 +1,16 @@
+{
+  "resource": "/recommendation",
+  "path": "/recommendation",
+  "httpMethod": "GET",
+  "headers": {
+    "Authorization": "Bearer fake-token"
+  },
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-id",
+        "zipCode": "12345"
+      }
+    }
+  }
+}
