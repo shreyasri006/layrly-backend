@@ -1,7 +1,14 @@
 package com.layrly.dao;
 
-import java.sql.PreparedStatement;
-import java.util.UUID;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Data Access Object for login_history table
@@ -9,15 +16,20 @@ import java.util.UUID;
  */
 public class LoginHistoryDAO extends BaseDAO {
     public void insert(UUID userName) throws Exception {
-        executeTransaction(conn -> {
-            String sql = "INSERT INTO login_history (user_name) VALUES (?)";
+        executeTransaction(dynamoDb -> {
+            Map<String, AttributeValue> item = new HashMap<>();
+            item.put("id", AttributeValue.builder().n(String.valueOf(System.currentTimeMillis())).build()); // Generate unique ID
+            item.put("user_name", AttributeValue.builder().s(userName.toString()).build());
+            item.put("login_time", AttributeValue.builder().s(Instant.now().toString()).build()); // Add current timestamp
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
+            PutItemRequest request = PutItemRequest.builder()
+                    .tableName("login_history")
+                    .item(item)
+                    .build();
 
-                int rowsAffected = stmt.executeUpdate();
-                System.out.println("User Loginin inserted successfully. Rows affected: " + rowsAffected);
-            }
+            dynamoDb.putItem(request);
+
+            System.out.println("User login inserted successfully into DynamoDB.");
         });
     }
 
@@ -33,45 +45,47 @@ public class LoginHistoryDAO extends BaseDAO {
      */
     public long getRecentLoginsByUserName(UUID userName) throws Exception {
 
-        return executeQuery(conn -> {
+        return executeQuery(dynamoDb -> {
             // Calculate consecutive login days starting from today or yesterday
-            String sql = """
-                    WITH login_dates AS (
-                        SELECT DISTINCT DATE(login_time) as login_date
-                        FROM login_history
-                        WHERE user_name = ?
-                    ),
-                    most_recent AS (
-                        SELECT MAX(login_date) as last_login_date
-                        FROM login_dates
+            // Query DynamoDB for login records of the given user
+            QueryRequest queryRequest = QueryRequest.builder()
+                    .tableName("login_history")
+                    .keyConditionExpression("user_name = :user_name")
+                    .expressionAttributeValues(
+                            Map.of(":user_name", AttributeValue.builder().s(userName.toString()).build())
                     )
-                    SELECT
-                        CASE
-                            WHEN (SELECT last_login_date FROM most_recent) < CURRENT_DATE - INTERVAL '1 day'
-                            THEN 0
-                            ELSE (
-                                SELECT COUNT(*)
-                                FROM (
-                                    SELECT
-                                        login_date,
-                                        ROW_NUMBER() OVER (ORDER BY login_date DESC) as row_num,
-                                        (SELECT last_login_date FROM most_recent) - login_date as days_from_latest
-                                    FROM login_dates
-                                ) ranked_dates
-                                WHERE row_num = days_from_latest + 1
-                            )
-                        END as count
-                    """;
+                    .projectionExpression("login_time")
+                    .limit(50)
+                    .build();
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                try (var rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return rs.getLong("count");
-                    }
+            QueryResponse response = dynamoDb.query(queryRequest);
+
+            // Extract and sort distinct login dates
+            Set<LocalDate> loginDates = response.items().stream()
+                    .map(item -> LocalDate.parse(item.get("login_time").s().substring(0, 10))) // Extract date part
+                    .collect(Collectors.toCollection(TreeSet::new)); // TreeSet ensures sorted order
+
+            // Calculate consecutive login streak
+            LocalDate today = LocalDate.now();
+            LocalDate yesterday = today.minusDays(1);
+
+            if (!loginDates.contains(today) && !loginDates.contains(yesterday)) {
+                return 0L; // No login today or yesterday
+            }
+
+            long streak = 0;
+            List<LocalDate> descendingDates = new ArrayList<>(loginDates);
+            descendingDates.sort(Comparator.reverseOrder());
+
+            for (LocalDate date : descendingDates) {
+                if (date.equals(today) || date.equals(yesterday) || date.equals(today.minusDays(streak))) {
+                    streak++;
+                } else {
+                    break;
                 }
             }
-            return 0L;
+
+            return streak;
         });
     }
 }

@@ -19,17 +19,17 @@ public class CategoryDAO extends BaseDAO {
             String sql = "SELECT id, name, display_order FROM category ORDER BY display_order";
             List<Category> categories = new ArrayList<>();
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while(rs.next()) {
-                        categories.add(new Category(
-                                rs.getInt("id"),
-                                rs.getString("name"),
-                                rs.getInt("display_order")
-                        ));
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                try (ResultSet rs = stmt.executeQuery()) {
+//                    while(rs.next()) {
+//                        categories.add(new Category(
+//                                rs.getInt("id"),
+//                                rs.getString("name"),
+//                                rs.getInt("display_order")
+//                        ));
+//                    }
+//                }
+//            }
             return categories;
         });
     }
@@ -44,14 +44,14 @@ public class CategoryDAO extends BaseDAO {
         return executeQuery(conn -> {
             String sql = "SELECT COUNT(*) as count FROM category";
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return rs.getLong("count");
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//
+//                try (ResultSet rs = stmt.executeQuery()) {
+//                    if(rs.next()) {
+//                        return rs.getLong("count");
+//                    }
+//                }
+//            }
             return 0L;
         });
     }

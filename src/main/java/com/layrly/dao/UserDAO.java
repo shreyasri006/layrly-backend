@@ -1,8 +1,15 @@
 package com.layrly.dao;
 
 import com.layrly.domain.User;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
 import java.sql.PreparedStatement;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -22,19 +29,22 @@ public class UserDAO extends BaseDAO {
      * @throws Exception if insertion fails
      */
     public void insertUser(UUID userName, String name, String email, String gender, String zip) throws Exception {
-        executeTransaction(conn -> {
-            String sql = "INSERT INTO users (user_name, name, email, gender, zip) VALUES (?, ?, ?, ?, ?)";
+        executeTransaction(dynamoDb -> {
+            Map<String, AttributeValue> itemValues = new HashMap<>();
+            itemValues.put("user_name", AttributeValue.builder().s(userName.toString()).build());
+            itemValues.put("name", AttributeValue.builder().s(name).build());
+            itemValues.put("email", AttributeValue.builder().s(email).build());
+            itemValues.put("gender", AttributeValue.builder().s(gender).build());
+            itemValues.put("zip", AttributeValue.builder().s(zip).build());
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                stmt.setString(2, name);
-                stmt.setString(3, email);
-                stmt.setString(4, gender);
-                stmt.setString(5, zip);
+            PutItemRequest request = PutItemRequest.builder()
+                    .tableName("users")
+                    .item(itemValues)
+                    .build();
 
-                int rowsAffected = stmt.executeUpdate();
-                System.out.println("User inserted successfully. Rows affected: " + rowsAffected);
-            }
+            dynamoDb.putItem(request);
+
+            System.out.println("User inserted successfully into DynamoDB.");
         });
     }
 
@@ -46,16 +56,19 @@ public class UserDAO extends BaseDAO {
      * @throws Exception if query fails
      */
     public boolean userExists(UUID userName) throws Exception {
-        return executeQuery(conn -> {
-            String sql = "SELECT 1 FROM users WHERE user_name = ?";
+        return executeQuery(dynamoDb -> {
+            Map<String, AttributeValue> key = new HashMap<>();
+            key.put("user_name", AttributeValue.builder().s(userName.toString()).build());
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                try (var rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return true;
-                    }
-                }
+            GetItemRequest request = GetItemRequest.builder()
+                    .tableName("users")
+                    .key(key)
+                    .build();
+
+            GetItemResponse response = dynamoDb.getItem(request);
+
+            if (response.hasItem()) {
+                return true;
             }
             return false;
         });
@@ -69,22 +82,26 @@ public class UserDAO extends BaseDAO {
      * @throws Exception if query fails
      */
     public User getUserByUsername(UUID userName) throws Exception {
-        return executeQuery(conn -> {
-            String sql = "SELECT user_name, name, email, gender, zip FROM users WHERE user_name = ?";
+        return executeQuery(dynamoDb -> {
+            Map<String, AttributeValue> key = new HashMap<>();
+            key.put("user_name", AttributeValue.builder().s(userName.toString()).build());
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                try (var rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return new User(
-                                rs.getObject("user_name", UUID.class),
-                                rs.getString("name"),
-                                rs.getString("email"),
-                                rs.getString("gender"),
-                                rs.getString("zip")
-                        );
-                    }
-                }
+            GetItemRequest request = GetItemRequest.builder()
+                    .tableName("users")
+                    .key(key)
+                    .build();
+
+            GetItemResponse response = dynamoDb.getItem(request);
+
+            if (response.hasItem()) {
+                Map<String, AttributeValue> item = response.item();
+                return new User(
+                        UUID.fromString(item.get("user_name").s()),
+                        item.get("name").s(),
+                        item.get("email").s(),
+                        item.get("gender").s(),
+                        item.get("zip").s()
+                );
             }
             return null;
         });

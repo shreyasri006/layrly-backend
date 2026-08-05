@@ -1,6 +1,6 @@
 package com.layrly.dao;
 
-import java.sql.Connection;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 /**
  * Abstract base class for all Data Access Objects
@@ -14,19 +14,16 @@ public abstract class BaseDAO {
      * @throws Exception if the operation fails
      */
     protected void executeTransaction(DatabaseOperation operation) throws Exception {
-        Connection conn = null;
+        DynamoDbClient dynamoDb = DynamoDbClient.create();
         try {
-            conn = DatabaseConnection.getConnection();
-            operation.execute(conn);
-            conn.commit();
+            operation.execute(dynamoDb);
         } catch (Exception e) {
-            DatabaseConnection.closeConnection(conn, true);
             e.printStackTrace();
             throw new RuntimeException(e.getMessage(), e);
         } finally {
-            if (conn != null && !conn.isClosed()) {
-                DatabaseConnection.closeConnection(conn);
-            }
+//            if (conn != null && !conn.isClosed()) {
+//                DatabaseConnection.closeConnection(conn);
+//            }
         }
     }
 
@@ -37,15 +34,14 @@ public abstract class BaseDAO {
      * @throws Exception if the query fails
      */
     protected <T> T executeQuery(DatabaseQuery<T> queryOperation) throws Exception {
-        Connection conn = null;
+        DynamoDbClient dynamoDb = DynamoDbClient.create();
         try {
-            conn = DatabaseConnection.getConnection();
-            return queryOperation.execute(conn);
+            return queryOperation.execute(dynamoDb);
         } catch (Exception e) {
             System.out.println("Database query failed: " + e.getMessage());
             throw new RuntimeException("Database query failed: " + e.getMessage(), e);
         } finally {
-            DatabaseConnection.closeConnection(conn);
+//            DatabaseConnection.closeConnection(dynamoDb);
         }
     }
 
@@ -54,7 +50,7 @@ public abstract class BaseDAO {
      */
     @FunctionalInterface
     public interface DatabaseOperation {
-        void execute(Connection conn) throws Exception;
+        void execute(DynamoDbClient dynamoDb) throws Exception;
     }
 
     /**
@@ -62,7 +58,7 @@ public abstract class BaseDAO {
      */
     @FunctionalInterface
     public interface DatabaseQuery<T> {
-        T execute(Connection conn) throws Exception;
+        T execute(DynamoDbClient dynamoDb) throws Exception;
     }
 }
 

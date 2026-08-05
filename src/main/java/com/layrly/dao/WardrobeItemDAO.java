@@ -22,8 +22,8 @@ public class WardrobeItemDAO extends BaseDAO {
      */
     public void insertWardrobeItem(WardrobeItem item) throws Exception {
         executeTransaction(conn -> {
-            Long itemId = insertWardrobeItem(item, conn);
-            insertWardrobeAnalyzedItem(itemId, item.analyzedItem().aiDescription(), conn);
+//            Long itemId = insertWardrobeItem(item, conn);
+//            insertWardrobeAnalyzedItem(itemId, item.analyzedItem().aiDescription(), conn);
         });
     }
 
@@ -74,23 +74,23 @@ public class WardrobeItemDAO extends BaseDAO {
             String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while(rs.next()) {
-                        items.add(new WardrobeItem(
-                                rs.getString("apparel_id"),
-                                rs.getObject("user_name", UUID.class),
-                                rs.getString("image_url"),
-                                rs.getString("category"),
-                                rs.getString("color"),
-                                rs.getString("brand"),
-                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
-                        ));
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setObject(1, userName);
+//
+//                try (ResultSet rs = stmt.executeQuery()) {
+//                    while(rs.next()) {
+//                        items.add(new WardrobeItem(
+//                                rs.getString("apparel_id"),
+//                                rs.getObject("user_name", UUID.class),
+//                                rs.getString("image_url"),
+//                                rs.getString("category"),
+//                                rs.getString("color"),
+//                                rs.getString("brand"),
+//                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
+//                        ));
+//                    }
+//                }
+//            }
             return items;
         });
     }
@@ -103,24 +103,24 @@ public class WardrobeItemDAO extends BaseDAO {
             String sql = "SELECT a.apparel_id, user_name, image_url, a.category, a.color, a.brand, a_a.ai_description::text as aiDescription FROM apparel a join apparel_analysis a_a on a.apparel_id = a_a.apparel_id WHERE a.user_name = ? AND a.category = ? ORDER BY a.apparel_id DESC";
             List<WardrobeItem> items = new ArrayList<>();
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                stmt.setString(2, category);
-
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while(rs.next()) {
-                        items.add(new WardrobeItem(
-                                rs.getString("apparel_id"),
-                                rs.getObject("user_name", UUID.class),
-                                rs.getString("image_url"),
-                                rs.getString("category"),
-                                rs.getString("color"),
-                                rs.getString("brand"),
-                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
-                        ));
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setObject(1, userName);
+//                stmt.setString(2, category);
+//
+//                try (ResultSet rs = stmt.executeQuery()) {
+//                    while(rs.next()) {
+//                        items.add(new WardrobeItem(
+//                                rs.getString("apparel_id"),
+//                                rs.getObject("user_name", UUID.class),
+//                                rs.getString("image_url"),
+//                                rs.getString("category"),
+//                                rs.getString("color"),
+//                                rs.getString("brand"),
+//                                new WardrobeAnalyzedItem(null, rs.getString("aiDescription"))
+//                        ));
+//                    }
+//                }
+//            }
             return items;
         });
     }
@@ -132,19 +132,19 @@ public class WardrobeItemDAO extends BaseDAO {
         executeTransaction(conn -> {
             String sql = "UPDATE apparel SET category = ?, color = ?, brand = ?, modified_at = CURRENT_TIMESTAMP WHERE apparel_id = ? AND user_name = ?";
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, category);
-                stmt.setString(2, color);
-                stmt.setString(3, brand);
-                stmt.setLong(4, id);
-                stmt.setObject(5, userName);
-
-                int rowsAffected = stmt.executeUpdate();
-                if(rowsAffected == 0) {
-                    throw new Exception("Wardrobe item not found or you do not have permission to update.");
-                }
-                System.out.println("Wardrobe item updated. Rows affected: " + rowsAffected);
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setString(1, category);
+//                stmt.setString(2, color);
+//                stmt.setString(3, brand);
+//                stmt.setLong(4, id);
+//                stmt.setObject(5, userName);
+//
+//                int rowsAffected = stmt.executeUpdate();
+//                if(rowsAffected == 0) {
+//                    throw new Exception("Wardrobe item not found or you do not have permission to update.");
+//                }
+//                System.out.println("Wardrobe item updated. Rows affected: " + rowsAffected);
+//            }
         });
     }
 
@@ -157,8 +157,8 @@ public class WardrobeItemDAO extends BaseDAO {
      */
     public void deleteWardrobeItem(long id, UUID userName) throws Exception {
         executeTransaction(conn -> {
-            deleteApparelAnalysis(id, conn);
-            deleteApparel(id, userName, conn);
+//            deleteApparelAnalysis(id, conn);
+//            deleteApparel(id, userName, conn);
         });
     }
 
@@ -202,15 +202,15 @@ public class WardrobeItemDAO extends BaseDAO {
         return executeQuery(conn -> {
             String sql = "SELECT COUNT(*) as count FROM apparel WHERE user_name = ?";
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return rs.getLong("count");
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setObject(1, userName);
+//
+//                try (ResultSet rs = stmt.executeQuery()) {
+//                    if(rs.next()) {
+//                        return rs.getLong("count");
+//                    }
+//                }
+//            }
             return 0L;
         });
     }

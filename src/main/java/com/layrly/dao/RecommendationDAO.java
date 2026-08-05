@@ -14,15 +14,15 @@ public class RecommendationDAO extends BaseDAO {
         executeTransaction(conn -> {
             String sql = "INSERT INTO recommendations (user_name, context, outfits, model_version) VALUES (?, ?::jsonb, ?::jsonb, ?)";
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                stmt.setString(2, context);
-                stmt.setString(3, outfits);
-                stmt.setString(4, model);
-
-                int rowsAffected = stmt.executeUpdate();
-                System.out.println("Recommendation inserted successfully. Rows affected: " + rowsAffected);
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setObject(1, userName);
+//                stmt.setString(2, context);
+//                stmt.setString(3, outfits);
+//                stmt.setString(4, model);
+//
+//                int rowsAffected = stmt.executeUpdate();
+//                System.out.println("Recommendation inserted successfully. Rows affected: " + rowsAffected);
+//            }
         });
     }
 
@@ -38,15 +38,15 @@ public class RecommendationDAO extends BaseDAO {
         return executeQuery(conn -> {
             String sql = "SELECT outfits::text as outfits FROM recommendations WHERE user_name = ? AND created_at > NOW() - INTERVAL '1 hour' * ?";
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                stmt.setInt(2, hours);
-                try (var rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return rs.getString("outfits");
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setObject(1, userName);
+//                stmt.setInt(2, hours);
+//                try (var rs = stmt.executeQuery()) {
+//                    if(rs.next()) {
+//                        return rs.getString("outfits");
+//                    }
+//                }
+//            }
             return null;
         });
     }
@@ -62,14 +62,14 @@ public class RecommendationDAO extends BaseDAO {
         return executeQuery(conn -> {
             String sql = "SELECT COUNT(*) as count FROM recommendations WHERE user_name = ?";
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, userName);
-                try (var rs = stmt.executeQuery()) {
-                    if(rs.next()) {
-                        return rs.getLong("count");
-                    }
-                }
-            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+//                stmt.setObject(1, userName);
+//                try (var rs = stmt.executeQuery()) {
+//                    if(rs.next()) {
+//                        return rs.getLong("count");
+//                    }
+//                }
+//            }
             return 0L;
         });
     }
