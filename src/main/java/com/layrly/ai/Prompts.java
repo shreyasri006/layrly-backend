@@ -100,6 +100,9 @@ public class Prompts {
             - Do NOT list accessories unless they are a major clothing element.
             - If a field cannot be confidently determined, return "unknown".
             - Do NOT output anything except the JSON object.
+            - <think></think>
+            - Output strictly raw JSON. Do not include markdown formatting, code blocks, or the word 'json'.
+            - Return only a valid JSON object.
             """;
 
     public static final String RECOMMENDATION_PROMPT = """
