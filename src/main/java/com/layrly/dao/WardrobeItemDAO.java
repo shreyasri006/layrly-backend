@@ -190,10 +190,34 @@ public class WardrobeItemDAO extends BaseDAO {
      * @param userName user name (for security validation)
      * @throws Exception if deletion fails
      */
-    public void deleteWardrobeItem(long id, UUID userName) throws Exception {
+    public void deleteWardrobeItem(String id, UUID userName) throws Exception {
         executeTransaction(dynamoDb -> {
-//            deleteApparelAnalysis(id, conn);
-//            deleteApparel(id, userName, conn);
+            try {
+                Map<String, AttributeValue> key = Map.of(
+                        "user_name", AttributeValue.builder()
+                                .s(userName.toString())
+                                .build(),
+                        "apparel_id", AttributeValue.builder()
+                                .s(id)
+                                .build()
+                );
+
+                DeleteItemRequest request = DeleteItemRequest.builder()
+                        .tableName("apparel")
+                        .key(key)
+                        .conditionExpression(
+                                "attribute_exists(user_name) AND attribute_exists(apparel_id)"
+                        )
+                        .build();
+
+                dynamoDb.deleteItem(request);
+
+            } catch (ConditionalCheckFailedException e) {
+                throw new Exception(
+                        "Wardrobe item not found or you do not have permission to delete.",
+                        e
+                );
+            }
         });
     }
 

@@ -21,7 +21,7 @@ public class WardrobeDeleteLambdaHandler extends LambdaHandler {
         String userName = getUserName(event);
 
         try {
-            long wardrobeItemId = Long.parseLong(event.getQueryStringParameters().get("id"));
+            String wardrobeItemId = event.getQueryStringParameters().get("id");
 
             wardrobeItemDAO.deleteWardrobeItem(wardrobeItemId, UUID.fromString(userName));
 
