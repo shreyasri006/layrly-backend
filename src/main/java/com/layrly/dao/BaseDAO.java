@@ -39,6 +39,7 @@ public abstract class BaseDAO {
             return queryOperation.execute(dynamoDb);
         } catch (Exception e) {
             System.out.println("Database query failed: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Database query failed: " + e.getMessage(), e);
         } finally {
 //            DatabaseConnection.closeConnection(dynamoDb);

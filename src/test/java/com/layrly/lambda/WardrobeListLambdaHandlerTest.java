@@ -40,6 +40,7 @@ public class WardrobeListLambdaHandlerTest extends AbstractLambdaHandlerTest {
         Context context = mock(Context.class);
 
         UUID userId = UUID.fromString("61cbb570-c061-7014-0768-39bb94515335");
+
         List<WardrobeItem> mockWardrobeItems = List.of(
                 new WardrobeItem("1", userId, "shirt.jpg", "Shirt", "Blue", "Nike",
                         new WardrobeAnalyzedItem("1", "{\"description\":\"A blue Nike shirt\"}")),
@@ -47,7 +48,7 @@ public class WardrobeListLambdaHandlerTest extends AbstractLambdaHandlerTest {
                         new WardrobeAnalyzedItem("2", "{\"description\":\"Black Levi's pants\"}"))
         );
 
-        when(mockDAO.getWardrobeItemsByUserId(userId)).thenReturn(mockWardrobeItems);
+        when(mockDAO.getWardrobeItemsByUserId(userId.toString())).thenReturn(mockWardrobeItems);
 
         // Act
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -70,7 +71,7 @@ public class WardrobeListLambdaHandlerTest extends AbstractLambdaHandlerTest {
                         new WardrobeAnalyzedItem("1", "{\"description\":\"A blue Nike shirt\"}"))
         );
 
-        when(mockDAO.getWardrobeItemsByUserNameAndCategory(userId, "Shirt")).thenReturn(mockWardrobeItems);
+        when(mockDAO.getWardrobeItemsByUserNameAndCategory(userId.toString(), "Shirt")).thenReturn(mockWardrobeItems);
 
         // Act
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -94,7 +95,7 @@ public class WardrobeListLambdaHandlerTest extends AbstractLambdaHandlerTest {
                         null)
         );
 
-        when(mockDAO.getWardrobeItemsByUserId(userId)).thenReturn(mockWardrobeItems);
+        when(mockDAO.getWardrobeItemsByUserId(userId.toString())).thenReturn(mockWardrobeItems);
 
         // Act
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);

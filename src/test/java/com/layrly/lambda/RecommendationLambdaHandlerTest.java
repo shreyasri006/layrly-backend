@@ -76,7 +76,7 @@ public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
                 new Recommendation(1, List.of(Map.of("apparel_id", "1", "type", "shirt", "description", "Blue Nike shirt")))
         );
 
-        when(wardrobeItemDAO.getWardrobeItemsByUserId(UUID.fromString(userName))).thenReturn(mockWardrobeItems);
+        when(wardrobeItemDAO.getWardrobeItemsByUserId(userName)).thenReturn(mockWardrobeItems);
 
         try (MockedStatic<WeatherService> mockedWeatherService = mockStatic(WeatherService.class);
              MockedStatic<ImageAnalyzer> mockedImageAnalyzer = mockStatic(ImageAnalyzer.class)) {
@@ -94,7 +94,7 @@ public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
             assertEquals(mockWeather, responseBody.weather());
             assertEquals(expectedRecommendations.size(), responseBody.recommendations().size());
 
-            verify(wardrobeItemDAO).getWardrobeItemsByUserId(UUID.fromString(userName));
+            verify(wardrobeItemDAO).getWardrobeItemsByUserId(userName);
 
             System.out.println("Response Body: " + response.getBody());
         }

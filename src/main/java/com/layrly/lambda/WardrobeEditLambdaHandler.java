@@ -23,7 +23,7 @@ public class WardrobeEditLambdaHandler extends LambdaHandler {
         String userName = getUserName(event);
 
         try {
-            long wardrobeItemId = Long.parseLong(event.getQueryStringParameters().get("id"));
+            String wardrobeItemId = event.getQueryStringParameters().get("id");
 
             Map<String, Object> requestBody = mapper.readValue(event.getBody(), Map.class);
 

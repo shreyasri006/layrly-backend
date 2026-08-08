@@ -52,7 +52,7 @@ public class RecommendationLambdaHandler extends LambdaHandler {
 
             Weather weather = WeatherService.getWeatherData(zipCode);
 
-            List<WardrobeItem> wardrobeItems = wardrobeItemDAO.getWardrobeItemsByUserId(UUID.fromString(userName));
+            List<WardrobeItem> wardrobeItems = wardrobeItemDAO.getWardrobeItemsByUserId(userName);
             List<JsonNode> apparelItems = getApparelItems(wardrobeItems);
 
             if(apparelItems == null) {

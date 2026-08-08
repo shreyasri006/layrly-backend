@@ -5,14 +5,9 @@ import com.layrly.domain.WardrobeItem;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Data Access Object for Wardrobe Items table
@@ -27,12 +22,12 @@ public class WardrobeItemDAO extends BaseDAO {
      */
     public void insertWardrobeItem(WardrobeItem item) throws Exception {
         executeTransaction(conn -> {
-            String itemId = insertWardrobeItem(item, conn);
-            insertWardrobeAnalyzedItem(itemId, item.analyzedItem().aiDescription(), conn);
+            String itemId = insertWardrobeItem(item, item.analyzedItem().aiDescription(), conn);
+            //insertWardrobeAnalyzedItem(itemId, item.analyzedItem().aiDescription(), conn);
         });
     }
 
-    private static String insertWardrobeItem(WardrobeItem item, DynamoDbClient dynamoDb) throws SQLException {
+    private static String insertWardrobeItem(WardrobeItem item, String aiDescription, DynamoDbClient dynamoDb) throws SQLException {
         String apparelId = UUID.randomUUID().toString();
 
         // Create item attributes
@@ -43,6 +38,7 @@ public class WardrobeItemDAO extends BaseDAO {
         itemValues.put("category", AttributeValue.builder().s(item.category()).build());
         itemValues.put("color", AttributeValue.builder().s(item.color()).build());
         itemValues.put("brand", AttributeValue.builder().s(item.brand()).build());
+        itemValues.put("ai_description", AttributeValue.builder().s(aiDescription).build());
         itemValues.put("created_at", AttributeValue.builder().s(Instant.now().toString()).build());
 
         // Build the PutItemRequest
@@ -82,7 +78,7 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserId(UUID userName) throws Exception {                 //11
+    public List<WardrobeItem> getWardrobeItemsByUserId(String userName) throws Exception {                 //11
         return executeQuery(dynamoDb -> {
             List<WardrobeItem> items = new ArrayList<>();
 
@@ -90,7 +86,7 @@ public class WardrobeItemDAO extends BaseDAO {
             QueryRequest apparelQuery = QueryRequest.builder()
                     .tableName(apparelTableName)
                     .keyConditionExpression("user_name = :userName")
-                    .expressionAttributeValues(Map.of(":userName", AttributeValue.builder().s(userName.toString()).build()))
+                    .expressionAttributeValues(Map.of(":userName", AttributeValue.builder().s(userName).build()))
                     .scanIndexForward(false) // Order by descending
                     .build();
 
@@ -101,19 +97,19 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Get all wardrobe items for a user by category with most recent items first
      */
-    public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(UUID userName, String category) throws Exception { //11
+    public List<WardrobeItem> getWardrobeItemsByUserNameAndCategory(String userName, String category) throws Exception { //11
         return executeQuery(dynamoDb -> {
             List<WardrobeItem> items = new ArrayList<>();
 
             // Step 1: Query the apparel table
             QueryRequest apparelQuery = QueryRequest.builder()
                     .tableName("apparel")
-                    .keyConditionExpression("user_name = :userName AND category = :category")
+                    .keyConditionExpression("user_name = :userName")
+                    .filterExpression("category = :category")
                     .expressionAttributeValues(Map.of(
-                            ":userName", AttributeValue.builder().s(userName.toString()).build(),
+                            ":userName", AttributeValue.builder().s(userName).build(),
                             ":category", AttributeValue.builder().s(category).build()
                     ))
-                    .scanIndexForward(false) // Order by descending
                     .build();
 
             return getWardrobeItems(dynamoDb, apparelQuery, items);
@@ -123,10 +119,54 @@ public class WardrobeItemDAO extends BaseDAO {
     /**
      * Update a wardrobe item by user name
      */
-    public void updateWardrobeItem(long id, String category, String color, String brand, UUID userName) throws Exception {
+    public void updateWardrobeItem(String apparelId, String category, String color, String brand, UUID userName) throws Exception {
         executeTransaction(dynamoDb -> {
-            String sql = "UPDATE apparel SET category = ?, color = ?, brand = ?, modified_at = CURRENT_TIMESTAMP WHERE apparel_id = ? AND user_name = ?";
+            try {
+                Map<String, AttributeValue> key = Map.of(
+                        "user_name", AttributeValue.builder()
+                                .s(userName.toString())
+                                .build(),
+                        "apparel_id", AttributeValue.builder()
+                                .s(apparelId)
+                                .build()
+                );
 
+                Map<String, AttributeValue> values = Map.of(
+                        ":category", AttributeValue.builder().s(category).build(),
+                        ":color", AttributeValue.builder().s(color).build(),
+                        ":brand", AttributeValue.builder().s(brand).build(),
+                        ":modifiedAt", AttributeValue.builder()
+                                .s(Instant.now().toString())
+                                .build()
+                );
+
+                UpdateItemRequest request = UpdateItemRequest.builder()
+                        .tableName(apparelTableName)
+                        .key(key)
+                        .updateExpression(
+                                "SET category = :category, " +
+                                        "color = :color, " +
+                                        "brand = :brand, " +
+                                        "modified_at = :modifiedAt"
+                        )
+                        .expressionAttributeValues(values)
+                        .conditionExpression(
+                                "attribute_exists(user_name) AND attribute_exists(apparel_id)"
+                        )
+                        .build();
+
+                dynamoDb.updateItem(request);
+
+                System.out.println("Wardrobe item updated. ID: " + apparelId);
+
+            } catch (ConditionalCheckFailedException e) {
+                throw new Exception(
+                        "Wardrobe item not found or you do not have permission to update.",
+                        e
+                );
+            }
+//            String sql = "UPDATE apparel SET category = ?, color = ?, brand = ?, modified_at = CURRENT_TIMESTAMP WHERE apparel_id = ? AND user_name = ?";
+//
 //            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 //                stmt.setString(1, category);
 //                stmt.setString(2, color);
@@ -223,40 +263,42 @@ public class WardrobeItemDAO extends BaseDAO {
             return items;
         }
 
-        // Step 2: BatchGetItem for apparel_analysis
-        List<Map<String, AttributeValue>> keys = apparelIds.stream()
-                .map(id -> Map.of("apparel_id", AttributeValue.builder().s(id).build()))
-                .toList();
-
-        BatchGetItemRequest batchRequest = BatchGetItemRequest.builder()
-                .requestItems(Map.of(
-                        apparelAnaylsisTableName,
-                        KeysAndAttributes.builder().keys(keys).build()
-                ))
-                .build();
-
-        BatchGetItemResponse batchResponse = dynamoDb.batchGetItem(batchRequest);
-
-        // Map apparel_id to ai_description
-        Map<String, String> analysisMap = batchResponse.responses().get(apparelAnaylsisTableName).stream()
-                .collect(Collectors.toMap(
-                        item -> item.get("apparel_id").s(),
-                        item -> item.get("ai_description").s()
-                ));
+//        // Step 2: BatchGetItem for apparel_analysis
+//        List<Map<String, AttributeValue>> keys = apparelIds.stream()
+//                .map(id -> Map.of("apparel_id", AttributeValue.builder().s(id).build()))
+//                .toList();
+//
+//        System.out.println("keys: " + keys);
+//
+//        BatchGetItemRequest batchRequest = BatchGetItemRequest.builder()
+//                .requestItems(Map.of(
+//                        apparelAnaylsisTableName,
+//                        KeysAndAttributes.builder().keys(keys).build()
+//                ))
+//                .build();
+//
+//        BatchGetItemResponse batchResponse = dynamoDb.batchGetItem(batchRequest);
+//
+//        // Map apparel_id to ai_description
+//        Map<String, String> analysisMap = batchResponse.responses().get(apparelAnaylsisTableName).stream()
+//                .collect(Collectors.toMap(
+//                        item -> item.get("apparel_id").s(),
+//                        item -> item.get("ai_description").s()
+//                ));
 
         // Step 3: Combine results
         for (Map<String, AttributeValue> apparelItem : apparelItems) {
-            String apparelId = apparelItem.get("apparel_id").s();
-            String aiDescription = analysisMap.get(apparelId);
+//            String apparelId = apparelItem.get("apparel_id").s();
+//            String aiDescription = analysisMap.get(apparelId);
 
             items.add(new WardrobeItem(
-                    apparelId,
+                    apparelItem.get("apparel_id").s(),
                     UUID.fromString(apparelItem.get("user_name").s()),
                     apparelItem.get("image_url").s(),
                     apparelItem.get("category").s(),
                     apparelItem.get("color").s(),
                     apparelItem.get("brand").s(),
-                    new WardrobeAnalyzedItem(null, aiDescription)
+                    new WardrobeAnalyzedItem(null, apparelItem.get("ai_description").s())
             ));
         }
 

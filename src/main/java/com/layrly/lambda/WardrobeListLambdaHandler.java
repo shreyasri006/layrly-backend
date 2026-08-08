@@ -26,9 +26,9 @@ public class WardrobeListLambdaHandler extends LambdaHandler {
 
             List<WardrobeItem> response;
             if(category == null || "all".equalsIgnoreCase(category)) {
-                response = wardrobeItemDAO.getWardrobeItemsByUserId(UUID.fromString(userName));
+                response = wardrobeItemDAO.getWardrobeItemsByUserId(userName);
             } else {
-                response = wardrobeItemDAO.getWardrobeItemsByUserNameAndCategory(UUID.fromString(userName), category);
+                response = wardrobeItemDAO.getWardrobeItemsByUserNameAndCategory(userName, category);
             }
 
             response = populateImageUrls(response);
