@@ -10,7 +10,6 @@ import com.layrly.dao.WardrobeItemDAO;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import static com.layrly.Util.mapper;
 import static com.layrly.lambda.ResponseUtil.getApiGatewayProxyResponseEvent;
@@ -26,9 +25,9 @@ public class DashboardLambdaHandler extends LambdaHandler {
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
         try {
             // Authenticated User
-            UUID userName = UUID.fromString(getUserName(event));
+            String userName = getUserName(event);
 
-            Map<String, Long> stats = new HashMap<>();
+            Map<String, Integer> stats = new HashMap<>();
             stats.put("recommendationsCount", recommendationDAO.getTotalRecommendationsCountByUserName(userName));
             stats.put("wardrobeItemCount", wardrobeItemDAO.getApparelCountByUserName(userName));
             stats.put("recentLoginCount", historyDAO.getRecentLoginsByUserName(userName));

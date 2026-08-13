@@ -7,7 +7,6 @@ import com.layrly.dao.WardrobeItemDAO;
 import com.layrly.domain.WardrobeItem;
 
 import java.util.List;
-import java.util.UUID;
 
 import static com.layrly.Util.CLOUDFRONT_DOMAIN;
 import static com.layrly.Util.mapper;
@@ -25,10 +24,10 @@ public class WardrobeListLambdaHandler extends LambdaHandler {
             String category = event.getQueryStringParameters().get("category");
 
             List<WardrobeItem> response;
-            if(category == null || "all".equalsIgnoreCase(category)) {
-                response = wardrobeItemDAO.getWardrobeItemsByUserId(UUID.fromString(userName));
+            if (category == null || "all".equalsIgnoreCase(category)) {
+                response = wardrobeItemDAO.getWardrobeItemsByUserId(userName);
             } else {
-                response = wardrobeItemDAO.getWardrobeItemsByUserNameAndCategory(UUID.fromString(userName), category);
+                response = wardrobeItemDAO.getWardrobeItemsByUserNameAndCategory(userName, category);
             }
 
             response = populateImageUrls(response);

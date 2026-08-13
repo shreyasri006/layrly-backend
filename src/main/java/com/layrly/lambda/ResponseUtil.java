@@ -10,7 +10,7 @@ public class ResponseUtil {
                                                                                boolean error) {
         APIGatewayProxyResponseEvent errorResponse = new APIGatewayProxyResponseEvent();
         errorResponse.setStatusCode(statusCode);
-        if(error) {
+        if (error) {
             errorResponse.setBody("{\"error\": \"" + message + "\"}");
         } else {
             errorResponse.setBody("{\"message\": \"" + message + "\"}");
