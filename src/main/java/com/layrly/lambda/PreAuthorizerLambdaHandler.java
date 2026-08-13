@@ -2,19 +2,23 @@ package com.layrly.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.layrly.dao.DAOFactory;
 import com.layrly.dao.UserDAO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.UUID;
 
 public class PreAuthorizerLambdaHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+    private static final Logger log = LoggerFactory.getLogger(PreAuthorizerLambdaHandler.class);
 
-    private final UserDAO userDAO = new UserDAO();
+    private static UserDAO userDAO = DAOFactory.getDao(UserDAO.class);
 
     @Override
     public Map<String, Object> handleRequest(Map<String, Object> event, Context context) {
 
-        System.out.println("Received event: " + event);
+        log.info("Received event: " + event);
 
         try {
             Map<String, Object> request = (Map<String, Object>) event.get("request");
@@ -30,8 +34,7 @@ public class PreAuthorizerLambdaHandler implements RequestHandler<Map<String, Ob
             userDAO.insertUser(UUID.fromString(userName), name, email, gender, zip);
 
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error: {}", e.getMessage(), e);
             throw new RuntimeException(e.getMessage(), e);
         }
 

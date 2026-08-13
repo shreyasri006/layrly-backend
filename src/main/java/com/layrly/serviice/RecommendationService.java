@@ -5,29 +5,38 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.layrly.ai.ImageAnalyzer;
+import com.layrly.dao.DAOFactory;
 import com.layrly.dao.RecommendationDAO;
 import com.layrly.dao.WardrobeItemDAO;
 import com.layrly.domain.WardrobeItem;
 import com.layrly.lambda.Recommendation;
 import com.layrly.lambda.RecommendationResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.layrly.Util.CLOUDFRONT_DOMAIN;
 import static com.layrly.Util.mapper;
 import static com.layrly.ai.Prompts.RECOMMENDATION_PROMPT;
 
 public class RecommendationService {
-    private final WardrobeItemDAO wardrobeItemDAO = new WardrobeItemDAO();
-    private final RecommendationDAO recommendationDAO = new RecommendationDAO();
-    private final ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
+    private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
+
+    private static WardrobeItemDAO wardrobeItemDAO = DAOFactory.getDao(WardrobeItemDAO.class);
+    private static RecommendationDAO recommendationDAO = DAOFactory.getDao(RecommendationDAO.class);
+    private static ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
 
     public Response getRecommendations(String userName, String zipCode) {
         try {
             // check DB if we have already created Recommendation in the last 1 hour
             String responseString = recommendationDAO.getLatestOutFitByUserNameAndCreatedTime(userName, 1);
-            if (responseString != null) {
-                System.out.println("Returning cached recommendation");
+            if(responseString != null) {
+                log.info("Returning cached recommendation");
                 return new Response(200, responseString);
             }
 
@@ -36,13 +45,13 @@ public class RecommendationService {
             List<WardrobeItem> wardrobeItems = wardrobeItemDAO.getWardrobeItemsByUserId(userName);
             List<JsonNode> apparelItems = getApparelItems(wardrobeItems);
 
-            if (apparelItems == null) {
+            if(apparelItems == null) {
                 return new Response(400,
                         "No wardrobe items found for user: " + userName);
             }
 
             String prompt = getRecommendationPrompt(apparelItems, weather);
-            System.out.println(prompt);
+            log.info(prompt);
 
             String aiResponse = imageAnalyzer.generateRecommendation(prompt);
             List<Recommendation> recommendations = mapper.readValue(aiResponse, new TypeReference<>() {
@@ -77,12 +86,12 @@ public class RecommendationService {
     }
 
     private void populateImageUrls(List<WardrobeItem> wardrobeItems, List<Recommendation> recommendations) {
-        for (Recommendation recommendation : recommendations) {
-            for (var item : recommendation.items()) {
+        for(Recommendation recommendation : recommendations) {
+            for(var item : recommendation.items()) {
                 String apparelId = (String) item.get("apparel_id");
                 WardrobeItem wi = wardrobeItems.stream().filter(i -> i.id().equals(apparelId)).findFirst().orElse(null);
 
-                if (wi != null) {
+                if(wi != null) {
                     item.put("image_url", getS3ImageUrl(wi.fileName()));
                 }
             }
@@ -92,12 +101,12 @@ public class RecommendationService {
     private List<Recommendation> deleteDuplicateApparelIds(List<Recommendation> recommendations) {
         List<Recommendation> filteredRecommendations = new ArrayList<>();
 
-        for (Recommendation recommendation : recommendations) {
+        for(Recommendation recommendation : recommendations) {
             Set<String> apparelIds = new HashSet<>();
             List<Map<String, Object>> filteredItems = new ArrayList<>();
-            for (var item : recommendation.items()) {
+            for(var item : recommendation.items()) {
                 String apparelId = (String) item.get("apparel_id");
-                if (!apparelIds.contains(apparelId)) {
+                if(!apparelIds.contains(apparelId)) {
                     apparelIds.add(apparelId);
                     filteredItems.add(item);
                 }
@@ -114,12 +123,12 @@ public class RecommendationService {
     }
 
     private List<JsonNode> getApparelItems(List<WardrobeItem> wardrobeItems) throws Exception {
-        if (wardrobeItems == null || wardrobeItems.isEmpty()) {
+        if(wardrobeItems == null || wardrobeItems.isEmpty()) {
             return null;
         }
 
         List<JsonNode> apparelItems = new ArrayList<>();
-        for (WardrobeItem item : wardrobeItems) {
+        for(WardrobeItem item : wardrobeItems) {
             var node = mapper.readValue(item.analyzedItem().aiDescription(), ObjectNode.class);
             node.put("apparel_id", item.id());
             apparelItems.add(node);

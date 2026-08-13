@@ -4,9 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.layrly.ai.ImageAnalyzer;
+import com.layrly.dao.DAOFactory;
 import com.layrly.dao.WardrobeItemDAO;
 import com.layrly.domain.WardrobeAnalyzedItem;
 import com.layrly.domain.WardrobeItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -22,21 +25,21 @@ import static com.layrly.ai.Prompts.IMAGE_META_DATA_EXTRACT_PROMPT;
 import static com.layrly.lambda.ResponseUtil.getApiGatewayProxyResponseEvent;
 
 public class WardrobeLambdaHandler extends LambdaHandler {
-
+    private static final Logger log = LoggerFactory.getLogger(APIGatewayProxyResponseEvent.class);
+    
     // bucket name (e.g., "layrly")
-    private final WardrobeItemDAO wardrobeItemDAO = new WardrobeItemDAO();
-    private final ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
+    private static WardrobeItemDAO wardrobeItemDAO = DAOFactory.getDao(WardrobeItemDAO.class);
+    private static ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-
         // Authenticated User
         String userName = getUserName(event);
 
         try {
             Map<String, Object> requestBody = mapper.readValue(event.getBody(), Map.class);
 
-            System.out.println("Received requestBody Keys: " + requestBody.keySet());
+            log.info("Received requestBody Keys: {}", requestBody.keySet());
 
             String imageBase64 = (String) requestBody.get("image");
             String fileName = UUID.randomUUID() + "/" + requestBody.get("fileName");
@@ -46,7 +49,7 @@ public class WardrobeLambdaHandler extends LambdaHandler {
             String brand = (String) requestBody.get("brand");
 
             // Print request parameters
-            System.out.println("File Name: " + fileName + ", Category: " + category + ", Color: " + color +
+            log.info("File Name: " + fileName + ", Category: " + category + ", Color: " + color +
                     ", Brand: " + brand);
 
             // Upload to S3 in the images folder
@@ -62,7 +65,7 @@ public class WardrobeLambdaHandler extends LambdaHandler {
                     brand, analyzedItem);
             wardrobeItemDAO.insertWardrobeItem(item);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error", e);
 
             // Return error response
             return getApiGatewayProxyResponseEvent(500, e.getMessage(), true);
@@ -86,7 +89,7 @@ public class WardrobeLambdaHandler extends LambdaHandler {
             byte[] imageBytes = Base64.getDecoder().decode(imageBase64);
 
             s3Client.putObject(putRequest, RequestBody.fromBytes(imageBytes));
-            System.out.println("Image uploaded to S3: " + s3Key);
+            log.info("Image uploaded to S3: {}", s3Key);
         }
     }
 }
