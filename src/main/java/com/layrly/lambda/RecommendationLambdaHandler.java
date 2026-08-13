@@ -14,12 +14,7 @@ import com.layrly.domain.WardrobeItem;
 import com.layrly.serviice.Weather;
 import com.layrly.serviice.WeatherService;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static com.layrly.Util.CLOUDFRONT_DOMAIN;
 import static com.layrly.Util.mapper;
@@ -44,7 +39,7 @@ public class RecommendationLambdaHandler extends LambdaHandler {
 
         try {
             // check DB if we have already created Recommendation in the last 1 hour
-            String responseString = recommendationDAO.getLatestOutFitByUserNameAndCreatedTime(UUID.fromString(userName), 1);
+            String responseString = recommendationDAO.getLatestOutFitByUserNameAndCreatedTime(userName, 1);
             if(responseString != null) {
                 System.out.println("Returning cached recommendation");
                 return getApiGatewayProxyResponseEvent(200, responseString);
@@ -75,7 +70,7 @@ public class RecommendationLambdaHandler extends LambdaHandler {
 
             responseString = mapper.writeValueAsString(response);
             // save the recommendation to DB
-            recommendationDAO.insert(UUID.fromString(userName), mapper.writeValueAsString(Map.of("prompt", prompt)),
+            recommendationDAO.insert(userName, mapper.writeValueAsString(Map.of("prompt", prompt)),
                     responseString, "groq");
 
             return getApiGatewayProxyResponseEvent(200, responseString);

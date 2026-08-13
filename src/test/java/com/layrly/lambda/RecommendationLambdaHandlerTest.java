@@ -109,7 +109,7 @@ public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
         String userName = "61cbb570-c061-7014-0768-39bb94515335";
         String zipCode = "46202";
 
-        when(recommendationDAO.getLatestOutFitByUserNameAndCreatedTime(UUID.fromString(userName), 1)).thenReturn("{\"weather\":{\"temperature\":70.0,\"feels_like\":65.0,\"description\":\"Sunny\",\"icon\":\"sunny.png\",\"wind_speed\":10.0,\"city_name\":\"New York\",\"detailed_description\":\"Clear skies\"},\"recommendations\":[{\"recommendation_id\":1,\"items\":[{\"apparel_id\":\"1\",\"type\":\"shirt\",\"description\":\"Blue Nike shirt\"}]}]}");
+        when(recommendationDAO.getLatestOutFitByUserNameAndCreatedTime(userName, 1)).thenReturn("{\"weather\":{\"temperature\":70.0,\"feels_like\":65.0,\"description\":\"Sunny\",\"icon\":\"sunny.png\",\"wind_speed\":10.0,\"city_name\":\"New York\",\"detailed_description\":\"Clear skies\"},\"recommendations\":[{\"recommendation_id\":1,\"items\":[{\"apparel_id\":\"1\",\"type\":\"shirt\",\"description\":\"Blue Nike shirt\"}]}]}");
 
         // Act
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
@@ -117,7 +117,7 @@ public class RecommendationLambdaHandlerTest extends AbstractLambdaHandlerTest {
         // Assert
         assertEquals(200, response.getStatusCode());
 
-        verify(recommendationDAO).getLatestOutFitByUserNameAndCreatedTime(UUID.fromString(userName), 1);
+        verify(recommendationDAO).getLatestOutFitByUserNameAndCreatedTime(userName, 1);
 
         System.out.println("Response Body: " + response.getBody());
     }

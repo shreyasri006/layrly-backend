@@ -7,7 +7,6 @@ import com.layrly.dao.WardrobeItemDAO;
 import com.layrly.domain.WardrobeItem;
 
 import java.util.List;
-import java.util.UUID;
 
 import static com.layrly.Util.CLOUDFRONT_DOMAIN;
 import static com.layrly.Util.mapper;

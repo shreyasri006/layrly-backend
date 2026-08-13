@@ -43,18 +43,20 @@ public class LoginHistoryDAO extends BaseDAO {
      * @return count of consecutive login days; 0 if no login in last 2 days
      * @throws Exception if query fails
      */
-    public long getRecentLoginsByUserName(UUID userName) throws Exception {
+    public int getRecentLoginsByUserName(String userName) throws Exception {
 
         return executeQuery(dynamoDb -> {
             // Calculate consecutive login days starting from today or yesterday
             // Query DynamoDB for login records of the given user
             QueryRequest queryRequest = QueryRequest.builder()
                     .tableName("login_history")
+                    .indexName("idx_login_user")
                     .keyConditionExpression("user_name = :user_name")
                     .expressionAttributeValues(
-                            Map.of(":user_name", AttributeValue.builder().s(userName.toString()).build())
+                            Map.of(":user_name", AttributeValue.builder().s(userName).build())
                     )
                     .projectionExpression("login_time")
+                    .scanIndexForward(false) // Order by descending
                     .limit(50)
                     .build();
 
@@ -70,10 +72,10 @@ public class LoginHistoryDAO extends BaseDAO {
             LocalDate yesterday = today.minusDays(1);
 
             if (!loginDates.contains(today) && !loginDates.contains(yesterday)) {
-                return 0L; // No login today or yesterday
+                return 0; // No login today or yesterday
             }
 
-            long streak = 0;
+            int streak = 0;
             List<LocalDate> descendingDates = new ArrayList<>(loginDates);
             descendingDates.sort(Comparator.reverseOrder());
 

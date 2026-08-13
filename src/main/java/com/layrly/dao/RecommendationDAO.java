@@ -1,28 +1,59 @@
 package com.layrly.dao;
 
-import com.layrly.domain.User;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
-import java.sql.PreparedStatement;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Data Access Object for recommendations table
  * Handles all database operations related to recommendations
  */
 public class RecommendationDAO extends BaseDAO {
-    public void insert(UUID userName, String context, String outfits, String model) throws Exception {
-        executeTransaction(conn -> {
-            String sql = "INSERT INTO recommendations (user_name, context, outfits, model_version) VALUES (?, ?::jsonb, ?::jsonb, ?)";
+    private static final String TABLE_NAME = "recommendations";
+    public void insert(String userName, String context, String outfits, String model) throws Exception {
+        executeTransaction(dynamoDb -> {
+            String createdAt = Instant.now().toString();
 
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//                stmt.setObject(1, userName);
-//                stmt.setString(2, context);
-//                stmt.setString(3, outfits);
-//                stmt.setString(4, model);
-//
-//                int rowsAffected = stmt.executeUpdate();
-//                System.out.println("Recommendation inserted successfully. Rows affected: " + rowsAffected);
-//            }
+            Map<String, AttributeValue> item = new HashMap<>();
+
+            item.put("user_name",
+                    AttributeValue.builder()
+                            .s(userName)
+                            .build());
+
+            item.put("created_at",
+                    AttributeValue.builder()
+                            .s(createdAt)
+                            .build());
+
+            item.put("context",
+                    AttributeValue.builder()
+                            .s(context)
+                            .build());
+
+            item.put("outfits",
+                    AttributeValue.builder()
+                            .s(outfits)
+                            .build());
+
+            item.put("model_version",
+                    AttributeValue.builder()
+                            .s(model)
+                            .build());
+
+            PutItemRequest request = PutItemRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .item(item)
+                    .build();
+
+            dynamoDb.putItem(request);
+
+            System.out.println("Recommendation inserted successfully.");
         });
     }
 
@@ -34,19 +65,32 @@ public class RecommendationDAO extends BaseDAO {
      * @return outFits (Recommendation)
      * @throws Exception if query fails
      */
-    public String getLatestOutFitByUserNameAndCreatedTime(UUID userName, int hours) throws Exception {                //2
-        return executeQuery(conn -> {
-            String sql = "SELECT outfits::text as outfits FROM recommendations WHERE user_name = ? AND created_at > NOW() - INTERVAL '1 hour' * ?";
+    public String getLatestOutFitByUserNameAndCreatedTime(String userName, int hours) throws Exception {                //2
+        return executeQuery(dynamoDb -> {
+            Instant cutoff = Instant.now().minusSeconds(hours * 60L * 60L);
 
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//                stmt.setObject(1, userName);
-//                stmt.setInt(2, hours);
-//                try (var rs = stmt.executeQuery()) {
-//                    if(rs.next()) {
-//                        return rs.getString("outfits");
-//                    }
-//                }
-//            }
+            QueryRequest request = QueryRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .keyConditionExpression(
+                            "user_name = :userName AND created_at > :cutoff"
+                    )
+                    .expressionAttributeValues(Map.of(
+                            ":userName", AttributeValue.builder()
+                                    .s(userName)
+                                    .build(),
+                            ":cutoff", AttributeValue.builder()
+                                    .s(cutoff.toString())
+                                    .build()
+                    ))
+                    .projectionExpression("outfits")
+                    .build();
+
+            QueryResponse response = dynamoDb.query(request);
+
+            if (response.count() > 0) {
+                return response.items().get(0).get("outfits").s();
+            }
+
             return null;
         });
     }
@@ -58,19 +102,21 @@ public class RecommendationDAO extends BaseDAO {
      * @return count of recommendations
      * @throws Exception if query fails
      */
-    public long getTotalRecommendationsCountByUserName(UUID userName) throws Exception {                             //2
-        return executeQuery(conn -> {
-            String sql = "SELECT COUNT(*) as count FROM recommendations WHERE user_name = ?";
+    public int getTotalRecommendationsCountByUserName(String userName) throws Exception {                             //2
+        return executeQuery(dynamoDb -> {
+            QueryRequest request = QueryRequest.builder()
+                    .tableName(TABLE_NAME)
+                    .keyConditionExpression("user_name = :userName")
+                    .expressionAttributeValues(Map.of(
+                            ":userName",
+                            AttributeValue.builder()
+                                    .s(userName)
+                                    .build()
+                    ))
+                    .select("COUNT")
+                    .build();
 
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//                stmt.setObject(1, userName);
-//                try (var rs = stmt.executeQuery()) {
-//                    if(rs.next()) {
-//                        return rs.getLong("count");
-//                    }
-//                }
-//            }
-            return 0L;
+            return dynamoDb.query(request).count();
         });
     }
 

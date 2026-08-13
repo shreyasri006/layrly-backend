@@ -1,11 +1,13 @@
 package com.layrly.dao;
 
 import com.layrly.domain.Category;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Data Access Object for Category table
@@ -15,21 +17,27 @@ public class CategoryDAO extends BaseDAO {
      * Get all categories
      */
     public List<Category> getAllCategories() throws Exception {
-        return executeQuery(conn -> {
-            String sql = "SELECT id, name, display_order FROM category ORDER BY display_order";
-            List<Category> categories = new ArrayList<>();
+        return executeQuery(dynamoDb -> {
+            ScanRequest request = ScanRequest.builder()
+                    .tableName("category")
+                    .projectionExpression("#name, display_order")
+                    .expressionAttributeNames(
+                            Map.of("#name", "name")
+                    )
+                    .build();
 
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//                try (ResultSet rs = stmt.executeQuery()) {
-//                    while(rs.next()) {
-//                        categories.add(new Category(
-//                                rs.getInt("id"),
-//                                rs.getString("name"),
-//                                rs.getInt("display_order")
-//                        ));
-//                    }
-//                }
-//            }
+            ScanResponse response = dynamoDb.scan(request);
+
+            List<Category> categories = response.items()
+                    .stream()
+                    .map(item -> new Category(
+                            Integer.parseInt(item.get("display_order").n()),
+                            item.get("name").s(),
+                            Integer.parseInt(item.get("display_order").n())
+                    ))
+                    .sorted(Comparator.comparingInt(Category::getDisplayOrder))
+                    .toList();
+
             return categories;
         });
     }
@@ -40,19 +48,28 @@ public class CategoryDAO extends BaseDAO {
      * @return count of Category
      * @throws Exception if query fails
      */
-    public long getTotalCategories() throws Exception {
-        return executeQuery(conn -> {
-            String sql = "SELECT COUNT(*) as count FROM category";
+    public int getTotalCategories() throws Exception {
+        return executeQuery(dynamoDb -> {
+            int total = 0;
+            Map<String, AttributeValue> lastKey = null;
 
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//
-//                try (ResultSet rs = stmt.executeQuery()) {
-//                    if(rs.next()) {
-//                        return rs.getLong("count");
-//                    }
-//                }
-//            }
-            return 0L;
+            do {
+                ScanRequest.Builder builder = ScanRequest.builder()
+                        .tableName("category")
+                        .select("COUNT");
+
+                if (lastKey != null && !lastKey.isEmpty()) {
+                    builder.exclusiveStartKey(lastKey);
+                }
+
+                var response = dynamoDb.scan(builder.build());
+
+                total += response.count();
+                lastKey = response.lastEvaluatedKey();
+
+            } while (lastKey != null && !lastKey.isEmpty());
+
+            return total;
         });
     }
 }

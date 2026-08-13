@@ -153,5 +153,8 @@ public class Prompts {
             - Ensure recommendations only use **existing wardrobe items and apparel_id**.
             - Prefer items that naturally layer together and match in style and color.
             - Do not add commentary, suggestions, or invented items — **output only JSON with provided wardrobe items**.
+            - Do NOT output anything except the JSON object.
+            - Output strictly raw JSON. Do not include markdown formatting, code blocks, or the word 'json'.
+            - Return only a valid JSON object.
             """;
 }

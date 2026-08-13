@@ -165,21 +165,6 @@ public class WardrobeItemDAO extends BaseDAO {
                         e
                 );
             }
-//            String sql = "UPDATE apparel SET category = ?, color = ?, brand = ?, modified_at = CURRENT_TIMESTAMP WHERE apparel_id = ? AND user_name = ?";
-//
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//                stmt.setString(1, category);
-//                stmt.setString(2, color);
-//                stmt.setString(3, brand);
-//                stmt.setLong(4, id);
-//                stmt.setObject(5, userName);
-//
-//                int rowsAffected = stmt.executeUpdate();
-//                if(rowsAffected == 0) {
-//                    throw new Exception("Wardrobe item not found or you do not have permission to update.");
-//                }
-//                System.out.println("Wardrobe item updated. Rows affected: " + rowsAffected);
-//            }
         });
     }
 
@@ -203,7 +188,7 @@ public class WardrobeItemDAO extends BaseDAO {
                 );
 
                 DeleteItemRequest request = DeleteItemRequest.builder()
-                        .tableName("apparel")
+                        .tableName(apparelTableName)
                         .key(key)
                         .conditionExpression(
                                 "attribute_exists(user_name) AND attribute_exists(apparel_id)"
@@ -221,35 +206,6 @@ public class WardrobeItemDAO extends BaseDAO {
         });
     }
 
-    private void deleteApparelAnalysis(long id, DynamoDbClient dynamoDb) throws Exception {
-        String sql = "DELETE FROM apparel_analysis WHERE apparel_id = ?";
-
-//        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//            stmt.setLong(1, id);
-//
-//            int rowsAffected = stmt.executeUpdate();
-//            if(rowsAffected == 0) {
-//                throw new Exception("Wardrobe item not found.");
-//            }
-//            System.out.println("Wardrobe Analysis item deleted. Rows affected: " + rowsAffected);
-//        }
-    }
-
-    private static void deleteApparel(long id, UUID userName, DynamoDbClient dynamoDb) throws Exception {
-        String sql = "DELETE FROM apparel WHERE apparel_id = ? AND user_name = ?";
-
-//        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//            stmt.setLong(1, id);
-//            stmt.setObject(2, userName);
-//
-//            int rowsAffected = stmt.executeUpdate();
-//            if(rowsAffected == 0) {
-//                throw new Exception("Wardrobe item not found or you do not have permission to delete.");
-//            }
-//            System.out.println("Wardrobe item deleted. Rows affected: " + rowsAffected);
-//        }
-    }
-
     /**
      * Get total count of apparel records for a given user name
      *
@@ -257,20 +213,23 @@ public class WardrobeItemDAO extends BaseDAO {
      * @return count of apparel records
      * @throws Exception if query fails
      */
-    public long getApparelCountByUserName(UUID userName) throws Exception { //11
+    public int getApparelCountByUserName(String userName) throws Exception { //11
         return executeQuery(dynamoDb -> {
-//            String sql = "SELECT COUNT(*) as count FROM apparel WHERE user_name = ?";
-//
-//            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-//                stmt.setObject(1, userName);
-//
-//                try (ResultSet rs = stmt.executeQuery()) {
-//                    if(rs.next()) {
-//                        return rs.getLong("count");
-//                    }
-//                }
-//            }
-            return 0L;
+            QueryRequest request = QueryRequest.builder()
+                    .tableName(apparelTableName)
+                    .keyConditionExpression("user_name = :user_name")
+                    .expressionAttributeValues(
+                            Map.of(
+                                    ":user_name",
+                                    AttributeValue.builder()
+                                            .s(userName)
+                                            .build()
+                            )
+                    )
+                    .select("COUNT")
+                    .build();
+
+            return dynamoDb.query(request).count();
         });
     }
 
@@ -322,7 +281,7 @@ public class WardrobeItemDAO extends BaseDAO {
                     apparelItem.get("category").s(),
                     apparelItem.get("color").s(),
                     apparelItem.get("brand").s(),
-                    new WardrobeAnalyzedItem(null, apparelItem.get("ai_description").s())
+                    new WardrobeAnalyzedItem(apparelItem.get("apparel_id").s(), apparelItem.get("ai_description").s())
             ));
         }
 
