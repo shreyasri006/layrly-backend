@@ -10,6 +10,7 @@ public abstract class BaseDAO {
 
     /**
      * Execute a database operation with automatic transaction management
+     *
      * @param operation the database operation to execute
      * @throws Exception if the operation fails
      */
@@ -29,6 +30,7 @@ public abstract class BaseDAO {
 
     /**
      * Execute a database query with automatic resource management
+     *
      * @param queryOperation the database query to execute
      * @return the result of the query
      * @throws Exception if the query fails

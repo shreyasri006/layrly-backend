@@ -15,6 +15,7 @@ import java.util.Map;
  */
 public class RecommendationDAO extends BaseDAO {
     private static final String TABLE_NAME = "recommendations";
+
     public void insert(String userName, String context, String outfits, String model) throws Exception {
         executeTransaction(dynamoDb -> {
             String createdAt = Instant.now().toString();

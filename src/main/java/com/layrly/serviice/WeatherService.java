@@ -15,7 +15,7 @@ public class WeatherService {
     private static HttpClient client;
 
     private static HttpClient getClient() {
-        if(client == null) {
+        if (client == null) {
             client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
@@ -50,9 +50,9 @@ public class WeatherService {
 
         // Generate description
         String breeze;
-        if(wind < 10) {
+        if (wind < 10) {
             breeze = "light breeze";
-        } else if(wind < 20) {
+        } else if (wind < 20) {
             breeze = "moderate wind";
         } else {
             breeze = "strong wind";

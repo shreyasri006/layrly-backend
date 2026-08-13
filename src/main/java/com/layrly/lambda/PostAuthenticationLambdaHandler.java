@@ -21,7 +21,7 @@ public class PostAuthenticationLambdaHandler implements RequestHandler<Map<Strin
 
             var userNameObj = event.get("userName");
 
-            if(userNameObj != null) {
+            if (userNameObj != null) {
                 historyDAO.insert(UUID.fromString(userNameObj.toString()));
             }
         } catch (Exception e) {

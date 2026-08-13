@@ -1,34 +1,8 @@
 package com.layrly.ai;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.layrly.dao.WardrobeItemDAO;
-import com.layrly.domain.WardrobeAnalyzedItem;
-import com.layrly.domain.WardrobeItem;
-import com.layrly.lambda.WardrobeLambdaHandler;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Base64;
-import java.util.Map;
 
 import static com.layrly.ai.Prompts.RECOMMENDATION_PROMPT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class ImageAnalyzerTest {
     private ObjectMapper mapper = new ObjectMapper();
@@ -163,11 +137,11 @@ public class ImageAnalyzerTest {
                     "items": [{ "type": "oxford shoes", "color": "dark brown", "color_family": "neutral", "pattern": "brogue", "material": "leather", "style": "formal", "fit": "regular", "layer": "base", "formality_level": 5, "season": ["fall","winter","spring"], "temperature_range_f": [40,75], "occasion": ["formal","work","interview"], "confidence": "high" }]
                   }
                 ]
-                    """;
+                """;
 
         String weather = """
-                    { "temperature": 66.0, "feelsLike": 66.0, "condition": "Overcast", "icon": "https://cdn.weatherapi.com/weather/64x64/night/122.png", "windMph": 5.1, "location": "San Gabriel, California", "description": "Overcast with light breeze" }
-                    """;
+                { "temperature": 66.0, "feelsLike": 66.0, "condition": "Overcast", "icon": "https://cdn.weatherapi.com/weather/64x64/night/122.png", "windMph": 5.1, "location": "San Gabriel, California", "description": "Overcast with light breeze" }
+                """;
 
         String prompt = RECOMMENDATION_PROMPT.replace("{{WARDROBE_JSON}}", wardrobeItems)
                 .replace("{{WEATHER_JSON}}", weather);

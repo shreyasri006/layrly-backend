@@ -24,7 +24,7 @@ public class WardrobeListLambdaHandler extends LambdaHandler {
             String category = event.getQueryStringParameters().get("category");
 
             List<WardrobeItem> response;
-            if(category == null || "all".equalsIgnoreCase(category)) {
+            if (category == null || "all".equalsIgnoreCase(category)) {
                 response = wardrobeItemDAO.getWardrobeItemsByUserId(userName);
             } else {
                 response = wardrobeItemDAO.getWardrobeItemsByUserNameAndCategory(userName, category);
