@@ -22,7 +22,6 @@ public class RecommendationService {
     private final RecommendationDAO recommendationDAO = new RecommendationDAO();
     private final ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
 
-    @Override
     public Response getRecommendations(String userName, String zipCode) {
         try {
             // check DB if we have already created Recommendation in the last 1 hour
@@ -39,7 +38,7 @@ public class RecommendationService {
 
             if (apparelItems == null) {
                 return new Response(400,
-                        "No wardrobe items found for user: " + userName, true);
+                        "No wardrobe items found for user: " + userName);
             }
 
             String prompt = getRecommendationPrompt(apparelItems, weather);
