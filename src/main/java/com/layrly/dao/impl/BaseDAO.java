@@ -1,5 +1,10 @@
-package com.layrly.dao;
+package com.layrly.dao.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 /**
@@ -7,6 +12,13 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
  * Provides common database operations for specific tables
  */
 public abstract class BaseDAO {
+    private static final Logger log = LoggerFactory.getLogger(BaseDAO.class);
+    private static final String region = System.getenv("AWS_REGION");
+    private static final DynamoDbClient dynamoDb = DynamoDbClient.builder()
+            .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+            .region(Region.of(region != null ? region : "us-east-2"))
+            .httpClient(UrlConnectionHttpClient.create())
+            .build();
 
     /**
      * Execute a database operation with automatic transaction management
@@ -15,16 +27,11 @@ public abstract class BaseDAO {
      * @throws Exception if the operation fails
      */
     protected void executeTransaction(DatabaseOperation operation) throws Exception {
-        DynamoDbClient dynamoDb = DynamoDbClient.create();
         try {
             operation.execute(dynamoDb);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Database transaction failed: {}", e.getMessage(), e);
             throw new RuntimeException(e.getMessage(), e);
-        } finally {
-//            if (conn != null && !conn.isClosed()) {
-//                DatabaseConnection.closeConnection(conn);
-//            }
         }
     }
 
@@ -36,15 +43,11 @@ public abstract class BaseDAO {
      * @throws Exception if the query fails
      */
     protected <T> T executeQuery(DatabaseQuery<T> queryOperation) throws Exception {
-        DynamoDbClient dynamoDb = DynamoDbClient.create();
         try {
             return queryOperation.execute(dynamoDb);
         } catch (Exception e) {
-            System.out.println("Database query failed: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Database query failed: {}", e.getMessage(), e);
             throw new RuntimeException("Database query failed: " + e.getMessage(), e);
-        } finally {
-//            DatabaseConnection.closeConnection(dynamoDb);
         }
     }
 

@@ -24,3 +24,15 @@
 
 6. **WardrobeLambdaHandler.java**
     - Uses UserDAO
+
+
+## Cold Start
+   The first TCP+TLS handshake to any remote endpoint on a cold start JVM is unavoidable. It's ~2.5–3s because:
+
+   - JVM loads SSL/TLS classes for the first time (~500ms)
+
+   - javax.net.ssl.SSLContext initializes the secure random seed (~500ms)
+
+   - TCP handshake to DynamoDB endpoint (~few ms, negligible)
+
+   - TLS 1.3 handshake (~100–200ms)

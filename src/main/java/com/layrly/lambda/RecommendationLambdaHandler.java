@@ -18,14 +18,14 @@ public class RecommendationLambdaHandler extends LambdaHandler {
         String userName = getUserName(event);
         String zipCode = getUserZip(event);
 
-        if (userName == null || zipCode == null) {
+        if(userName == null || zipCode == null) {
             return getApiGatewayProxyResponseEvent(401, "Unauthorized", true);
         }
 
         // check DB if we have already created Recommendation in the last 1 hour
         Response response = service.getRecommendations(userName, zipCode);
 
-        if (response.statusCode() == 200) {
+        if(response.statusCode() == 200) {
             return getApiGatewayProxyResponseEvent(200, response.body());
         } else {
             return getApiGatewayProxyResponseEvent(response.statusCode(), response.body(), true);

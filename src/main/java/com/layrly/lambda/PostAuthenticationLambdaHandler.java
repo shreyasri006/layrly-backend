@@ -2,31 +2,30 @@ package com.layrly.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.layrly.dao.DAOFactory;
 import com.layrly.dao.LoginHistoryDAO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.UUID;
-
-import static com.layrly.Util.mapper;
 
 public class PostAuthenticationLambdaHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+    private static final Logger log = LoggerFactory.getLogger(PostAuthenticationLambdaHandler.class);
 
-    private final LoginHistoryDAO historyDAO = new LoginHistoryDAO();
+    private static LoginHistoryDAO historyDAO = DAOFactory.getDao(LoginHistoryDAO.class);
 
     @Override
     public Map<String, Object> handleRequest(Map<String, Object> event, Context context) {
         try {
-            System.out.println("Received event: " + mapper.writeValueAsString(event));
-            System.out.println("Received context: " + mapper.writeValueAsString(context));
+            // log.info("Received event: {}", mapper.writeValueAsString(event));
 
             var userNameObj = event.get("userName");
 
-            if (userNameObj != null) {
-                historyDAO.insert(UUID.fromString(userNameObj.toString()));
+            if(userNameObj != null) {
+                historyDAO.insert(userNameObj.toString());
             }
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error: {}", e.getMessage(), e);
             throw new RuntimeException(e.getMessage(), e);
         }
 
